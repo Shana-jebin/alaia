@@ -1,0 +1,128 @@
+{% extends 'user_profile/base_profile.html' %}
+{% load static %}
+
+{% block title %}
+  Add New Address - ALAIA
+{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'user_profile/add-address.css' %}" />
+  <link rel="stylesheet" href="{% static 'user_profile/profile.css' %}" />
+{% endblock %}
+
+{% block profile_content %}
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="page-header">
+      <h1>Add New Address</h1>
+      <p>Fill in the details below to add a new shipping address.</p>
+    </div>
+
+    <form method="POST" class="address-form">
+      {% csrf_token %}
+
+      <div class="form-group">
+        <label for="fullName">Full Name</label>
+        <input type="text" name="full_name"
+       value="{{ address.full_name|default:'' }}"
+       required>
+
+      </div>
+
+      <div class="form-group">
+        <label for="addressLine1">Address Line 1</label>
+       <input type="text" name="address_line1"
+       value="{{ address.address_line1|default:'' }}"
+       required>
+
+      </div>
+
+      <div class="form-group">
+        <label for="addressLine2">Address Line 2 (Optional)</label>
+        <input type="text" name="address_line2"
+       value="{{ address.address_line2|default:'' }}">
+
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="city">City</label>
+          <input type="text" name="city"
+       value="{{ address.city|default:'' }}"
+       required>
+
+        </div>
+
+        <div class="form-group">
+          <label for="state">State / Province</label>
+          <input type="text" name="state"
+       value="{{ address.state|default:'' }}">
+
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="postalCode">Postal Code</label>
+          <input type="text" name="postal_code"
+       value="{{ address.postal_code|default:'' }}"
+       required>
+
+        </div>
+
+        <div class="form-group">
+          <label for="country">Country</label>
+         <select name="country" required>
+  <option value="">Select Country</option>
+
+  <option value="UK" {% if address.country == "UK" %}selected{% endif %}>United Kingdom</option>
+  <option value="US" {% if address.country == "US" %}selected{% endif %}>United States</option>
+  <option value="CA" {% if address.country == "CA" %}selected{% endif %}>Canada</option>
+  <option value="AU" {% if address.country == "AU" %}selected{% endif %}>Australia</option>
+  <option value="FR" {% if address.country == "FR" %}selected{% endif %}>France</option>
+  <option value="DE" {% if address.country == "DE" %}selected{% endif %}>Germany</option>
+  <option value="IT" {% if address.country == "IT" %}selected{% endif %}>India</option>
+  <option value="ES" {% if address.country == "ES" %}selected{% endif %}>Spain</option>
+  <option value="NL" {% if address.country == "NL" %}selected{% endif %}>Netherlands</option>
+  <option value="BE" {% if address.country == "BE" %}selected{% endif %}>Belgium</option>
+</select>
+
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="phone">Phone Number</label>
+        <input type="tel" name="phone"
+       value="{{ address.phone|default:'' }}"
+       required>
+
+      </div>
+
+      <div class="checkbox-container">
+        <div class="checkbox-group">
+          <input type="checkbox" name="is_default"
+    {% if address.is_default %}checked{% endif %}>
+
+          <label for="setDefault">Set as default shipping address</label>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-cancel" id="cancelBtn">Cancel</button>
+        <button type="submit" class="btn btn-save">Save Address</button>
+      </div>
+    </form>
+  </main>
+{% endblock %}
+
+{% block extra_js %}
+  <script>
+    const cancelBtn = document.getElementById('cancelBtn')
+    
+    cancelBtn.addEventListener('click', () => {
+      if (confirm('Are you sure you want to cancel?')) {
+        window.location.href = "{% url 'address_list' %}"
+      }
+    })
+  </script>
+{% endblock %}

@@ -1,0 +1,236 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+.toast-message {
+    position: fixed;
+    top: 80px;   
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 14px;
+    font-weight: 500;
+    color: #16a34a;
+    z-index: 9999;
+    animation: fadeDown 0.4s ease;
+}
+.empty-state {
+    text-align: center;
+    margin-top: 80px;
+}
+
+.empty-state h2 {
+    font-size: 28px;
+    margin-bottom: 10px;
+}
+
+.empty-state p {
+    color: #666;
+    margin-bottom: 25px;
+}
+
+
+@keyframes fadeDown {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -10px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+}
+
+body {
+    font-family: 'Cormorant Garamond', 'Georgia', serif;
+    background-color: #f8f8f8;
+    color: #333;
+}
+
+.account-inner {
+    padding: 60px 80px;
+}
+
+
+
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 50px;
+}
+
+.header-text h1 {
+    font-size: 42px;
+    font-weight: 400;
+    margin-bottom: 12px;
+    color: #000;
+}
+
+.header-text p {
+    font-size: 16px;
+    color: #666;
+    font-family: 'Arial', sans-serif;
+}
+
+.add-address-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #000;
+    color: white;
+    border: none;
+    padding: 16px 32px;
+    font-size: 15px;
+    font-family: 'Arial', sans-serif;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.3s ease;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+
+.add-address-btn:hover {
+    background: #333;
+}
+
+/* Address Cards */
+.addresses-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    gap: 24px;
+}
+
+.empty-state {
+    margin-top: 60px;
+    text-align: center;
+}
+
+.address-card {
+    background: white;
+    border-radius: 12px;
+    padding: 32px;
+    position: relative;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    transition: box-shadow 0.3s ease;
+}
+
+.address-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.default-badge {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    background: #000;
+    color: white;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-family: 'Arial', sans-serif;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+
+.address-card h3 {
+    font-size: 22px;
+    font-weight: 500;
+    margin-bottom: 20px;
+    color: #000;
+}
+
+.address-details {
+    font-family: 'Arial', sans-serif;
+    font-size: 15px;
+    line-height: 1.7;
+    color: #555;
+    margin-bottom: 20px;
+}
+
+.address-details p {
+    margin-bottom: 4px;
+}
+
+.phone {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #f0f0f0;
+    color: #666;
+    font-size: 14px;
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;   
+    gap: 16px;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #f0f0f0;
+}
+
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 14px;
+    font-family: 'Arial', sans-serif;
+    cursor: pointer;
+    transition: color 0.3s ease;
+    padding: 4px 0;
+}
+
+.action-btn:hover {
+    color: #000;
+}
+
+.action-btn.delete {
+    color: #c41e3a;
+}
+
+.action-btn.delete:hover {
+    color: #a01629;
+}
+
+.action-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.set-default-btn {
+    margin-left: auto;
+    color: #000;
+    font-weight: 500;
+}
+
+.set-default-btn:hover {
+    color: #c41e3a;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .sidebar {
+        position: relative;
+        width: 100%;
+        padding: 40px 20px;
+        height: auto;
+    }
+
+    .main-content {
+        flex: 1;
+        padding: 80px 80px 60px 80px;
+        background: #f8f8f8;
+    }
+
+    .addresses-grid {
+        grid-template-columns: 1fr;
+    }
+}

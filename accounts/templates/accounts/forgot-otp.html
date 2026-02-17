@@ -1,0 +1,136 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Verify OTP - Password Reset</title>
+    <link rel="stylesheet" href="{% static 'accounts/user/forgot-otp.css' %}" />
+  </head>
+  <body>
+    <!-- Left Section -->
+    <div class="left-section">
+      <div class="content-wrapper">
+        <h1>VERIFICATION</h1>
+        <p class="description">Enter the 6-digit code sent to your email to reset your password.</p>
+   {% if messages %}
+  <div class="message-container">
+    {% for message in messages %}
+      <div class="alert {{ message.tags }}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+
+
+        <form method="POST">
+          {% csrf_token %}
+
+          <div class="form-group">
+            <label>Security Code</label>
+            <div class="otp-container" id="otpContainer">
+              <input type="text" class="otp-input" maxlength="1" placeholder="—" required />
+              <input type="text" class="otp-input" maxlength="1" placeholder="—" required />
+              <input type="text" class="otp-input" maxlength="1" placeholder="—" required />
+              <input type="text" class="otp-input" maxlength="1" placeholder="—" required />
+              <input type="text" class="otp-input" maxlength="1" placeholder="—" required />
+              <input type="text" class="otp-input" maxlength="1" placeholder="—" required />
+            </div>
+          </div>
+          <input type="hidden" name="otp" id="final-otp" />
+          <button type="submit" class="verify-btn">
+            Verify Code
+            <span class="arrow-icon">→</span>
+          </button>
+        </form>
+
+        <div class="resend-section">
+          <p class="resend-text">
+            <strong id="countdown">1:00</strong>
+          </p>
+
+          <a href="{% url 'resend_forgot_otp' %}" id="resendLink" class="resend-link" style="display:none;">Resend OTP</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-section">
+      <h2>VERIFY<br />YOUR</h2>
+      <div class="identity-text">PASSWORD</div>
+      <div class="red-line"></div>
+    </div>
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        const otpInputs = document.querySelectorAll('.otp-input')
+        const finalOtp = document.getElementById('final-otp')
+        const verifyBtn = document.querySelector('.verify-btn')
+        const countdown = document.getElementById('countdown')
+        const resendLink = document.getElementById('resendLink')
+      
+        function updateOTP() {
+          let otp = ''
+          otpInputs.forEach((input) => (otp += input.value))
+          finalOtp.value = otp
+      
+          verifyBtn.disabled = otp.length !== 6
+        }
+      
+        otpInputs.forEach((input, index) => {
+          input.addEventListener('input', function () {
+            this.value = this.value.replace(/[^0-9]/g, '')
+      
+            if (this.value && index < otpInputs.length - 1) {
+              otpInputs[index + 1].focus()
+            }
+      
+            updateOTP()
+          })
+      
+          input.addEventListener('keydown', function (e) {
+            if (e.key === 'Backspace' && !this.value && index > 0) {
+              otpInputs[index - 1].focus()
+            }
+          })
+      
+          input.addEventListener('paste', function (e) {
+            e.preventDefault()
+            const pasteData = e.clipboardData.getData('text').replace(/\D/g, '')
+      
+            if (pasteData.length === 6) {
+              otpInputs.forEach((inp, i) => {
+                inp.value = pasteData[i]
+              })
+              updateOTP()
+            }
+          })
+        })
+      
+        document.querySelector('form').addEventListener('submit', function () {
+          verifyBtn.disabled = true
+          verifyBtn.innerText = 'Verifying...'
+        })
+      
+        let timeLeft = 60
+        resendLink.style.display = 'none'
+      
+        const timer = setInterval(function () {
+          if (timeLeft <= 0) {
+            clearInterval(timer)
+            countdown.textContent = 'Expired'
+            resendLink.style.display = 'inline'
+            return
+          }
+      
+          let minutes = Math.floor(timeLeft / 60)
+          let seconds = timeLeft % 60
+      
+          countdown.textContent = minutes + ':' + (seconds < 10 ? '0' + seconds : seconds)
+      
+          timeLeft--
+        }, 1000)
+      })
+    </script>
+  </body>
+</html>

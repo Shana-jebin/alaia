@@ -1,0 +1,432 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background-color: #000000;
+    color: #ffffff;
+    padding: 40px 60px;
+}
+
+.header {
+    margin-bottom: 40px;
+}
+
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.header h1 {
+    font-size: 36px;
+    font-weight: 700;
+    margin: 0;
+}
+
+.btn-add-category {
+    background-color: #dc2626;
+    border: none;
+    color: #ffffff;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.btn-add-category:hover {
+    background-color: #b91c1c;
+}
+
+.btn-add-category svg {
+    width: 16px;
+    height: 16px;
+}
+
+.search-bar {
+    width: 100%;
+    background-color: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    padding: 16px 20px;
+    color: #666666;
+    font-size: 15px;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.search-bar:focus {
+    border-color: #3a3a3a;
+    color: #ffffff;
+}
+
+.search-bar::placeholder {
+    color: #666666;
+}
+
+.table-container {
+    background-color: #0d0d0d;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-top: 40px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+thead {
+    background-color: #0d0d0d;
+}
+
+th {
+    text-align: left;
+    padding: 20px 24px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #888888;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #1a1a1a;
+}
+
+tbody tr {
+    border-bottom: 1px solid #1a1a1a;
+    transition: background-color 0.2s ease;
+}
+
+tbody tr:hover {
+    background-color: #151515;
+}
+
+td {
+    padding: 24px;
+    font-size: 15px;
+    color: #ffffff;
+}
+
+.category-name {
+    font-weight: 500;
+}
+
+.slug {
+    color: #999999;
+    font-size: 14px;
+}
+
+.offer {
+    color: #999999;
+    font-size: 14px;
+}
+
+.date {
+    color: #999999;
+    font-size: 14px;
+}
+
+.status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #22c55e;
+}
+
+.status-text {
+    color: #22c55e;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.status.deleted .status-dot {
+    background-color: #ef4444;
+}
+
+.status.deleted .status-text {
+    color: #ef4444;
+}
+
+.actions {
+    display: flex;
+    gap: 12px;
+}
+
+.btn-icon {
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-edit {
+    color: #888888;
+}
+
+.btn-edit:hover {
+    background-color: #1a1a1a;
+    color: #ffffff;
+}
+
+.btn-delete {
+    color: #dc2626;
+}
+
+.btn-delete:hover {
+    background-color: rgba(220, 38, 38, 0.1);
+}
+
+.btn-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* Modal Styles */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.75);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal {
+    background-color: #0d0d0d;
+    border: 1px solid #1a1a1a;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    padding: 0;
+    position: relative;
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    padding: 24px 24px 20px 24px;
+    border-bottom: 1px solid #1a1a1a;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+    color: #ffffff;
+}
+
+.btn-close {
+    background: transparent;
+    border: none;
+    color: #888888;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease;
+}
+
+.btn-close:hover {
+    color: #ffffff;
+}
+
+.btn-close svg {
+    width: 20px;
+    height: 20px;
+}
+
+.modal-body {
+    padding: 24px;
+}
+
+.form-group {
+    margin-bottom: 24px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: #ffffff;
+    margin-bottom: 8px;
+}
+
+.form-group label .required {
+    color: #dc2626;
+    margin-left: 4px;
+}
+
+.form-control {
+    width: 100%;
+    background-color: #000000;
+    border: 1px solid #2a2a2a;
+    border-radius: 6px;
+    padding: 12px 16px;
+    color: #ffffff;
+    font-size: 14px;
+    outline: none;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.form-control:focus {
+    border-color: #3a3a3a;
+}
+
+.form-control::placeholder {
+    color: #666666;
+}
+
+textarea.form-control {
+    resize: vertical;
+    min-height: 80px;
+}
+
+select.form-control {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23888888'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 20px;
+    padding-right: 40px;
+    cursor: pointer;
+}
+
+select.form-control option {
+    background-color: #0d0d0d;
+    color: #ffffff;
+}
+
+.modal-footer {
+    padding: 20px 24px 24px 24px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.btn {
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.btn-cancel {
+    background-color: transparent;
+    border: 1px solid #2a2a2a;
+    color: #ffffff;
+}
+
+.btn-cancel:hover {
+    background-color: #1a1a1a;
+}
+
+.btn-primary {
+    background-color: #dc2626;
+    color: #ffffff;
+}
+
+.btn-primary:hover {
+    background-color: #b91c1c;
+}
+
+.btn-danger {
+    background-color: #dc2626;
+    color: #ffffff;
+}
+
+.btn-danger:hover {
+    background-color: #b91c1c;
+}
+
+/* Delete Modal Specific Styles */
+.modal-delete {
+    max-width: 480px;
+}
+
+.delete-warning {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+}
+
+.warning-icon {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    background-color: rgba(220, 38, 38, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.warning-icon svg {
+    width: 28px;
+    height: 28px;
+    color: #dc2626;
+}
+
+.warning-content {
+    flex: 1;
+}
+
+.warning-content h3 {
+    font-size: 15px;
+    font-weight: 500;
+    color: #ffffff;
+    margin: 0 0 8px 0;
+    line-height: 1.5;
+}
+
+.warning-content p {
+    font-size: 14px;
+    color: #888888;
+    margin: 0;
+    line-height: 1.5;
+}

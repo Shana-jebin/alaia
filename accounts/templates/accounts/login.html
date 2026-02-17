@@ -1,0 +1,111 @@
+{% load static %}
+{% load socialaccount %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sign In - The Atelier</title>
+    <link rel="stylesheet" href="{% static 'accounts/user/login.css' %}" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="left-section">
+        <div class="sign-in-form">
+          <h1>SIGN IN</h1>
+<p class="welcome-text">Welcome back to the atelier.</p>
+{% if messages %}
+  <div class="message-container">
+    {% for message in messages %}
+      <div class="alert {{ message.tags }}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+
+
+          <form method="POST">
+            {% csrf_token %}
+
+            <!-- EMAIL -->
+            <div class="form-group">
+              <label for="email">Email Address</label>
+              <input type="email" name="email" value="{{ old.email|default:'' }}" class="{% if errors.email %}error-input{% endif %}" />
+              {% if errors.email %}
+                <p class="error-text">{{ errors.email }}</p>
+              {% endif %}
+            </div>
+
+            <div class="form-group">
+              <label for="password">Password</label>
+
+             <div class="password-container">
+    <input type="password"
+           id="password"
+           name="password"
+           class="{% if errors.password %}error-input{% endif %}" />
+
+    <span class="eye" onclick="togglePassword()">
+        <!-- svg -->
+    </span>
+</div>
+
+{% if errors.password %}
+  <p class="error-text">{{ errors.password }}</p>
+{% endif %}
+
+
+              <div class="forgot-password">
+                <a href="{% url 'forgot-password' %}">Forgot Password?</a>
+              </div>
+            </div>
+
+            <button type="submit" class="sign-in-btn">
+              Sign In
+              <span class="arrow">→</span>
+            </button>
+          </form>
+
+          <div class="divider">
+            <div class="divider-line"></div>
+            <span class="divider-text">Or</span>
+            <div class="divider-line"></div>
+          </div>
+          <a href="{% provider_login_url 'google' %}" class="google-btn">
+            <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo" class="google-icon" />
+            Continue with Google
+          </a>
+
+          <div class="footer-text">
+            Not a member yet?
+            <br />
+            <a href="{% url 'signup' %}" class="create-account">Create Account</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="right-section">
+        <div class="statement-text">
+          <h2>Access</h2>
+          <h2 class="statement">your</h2>
+          <h2>Account</h2>
+          <div class="underline"></div>
+          <p class="subtext">Join 50,000+ others defining the future of fashion</p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function signInWithGoogle() {
+        alert('Google OAuth integration needed.')
+      }
+      
+      function togglePassword() {
+        const password = document.getElementById('password')
+        password.type = password.type === 'password' ? 'text' : 'password'
+      }
+    </script>
+  </body>
+</html>

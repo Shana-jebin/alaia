@@ -1,0 +1,255 @@
+{% extends 'adminpanel/base_admin.html' %}
+{% load static %}
+{% block page_title %}
+  Dashboard
+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'adminpanel/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-header">
+        <span class="stat-label">Total Revenue</span>
+        <span class="stat-icon">$</span>
+      </div>
+      <div class="stat-value">$128,490</div>
+      <div class="stat-change positive">
+        <span class="stat-arrow">↑</span>
+        <span>+12.5%</span>
+        <span class="stat-comparison">vs last month</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-header">
+        <span class="stat-label">Total Orders</span>
+        <span class="stat-icon">📋</span>
+      </div>
+      <div class="stat-value">1,429</div>
+      <div class="stat-change positive">
+        <span class="stat-arrow">↑</span>
+        <span>+8.2%</span>
+        <span class="stat-comparison">vs last month</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-header">
+        <div class="stat-value">{{ active_users }}</div>
+        <span class="stat-icon">👥</span>
+      </div>
+      <div class="stat-value">3,842</div>
+      <div class="stat-change positive">
+        <span class="stat-arrow">↑</span>
+        <span>+23.1%</span>
+        <span class="stat-comparison">vs last month</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Grid -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h3 class="chart-title">Revenue Overview</h3>
+      <div class="chart-container">
+        <canvas id="revenueChart"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <h3 class="chart-title">Sales by Category</h3>
+      <div class="chart-container">
+        <canvas id="categoryChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Orders Table -->
+  <div class="table-card">
+    <div class="table-header">
+      <h3 class="table-title">Recent Orders</h3>
+      <a href="#" class="view-all-btn">View All</a>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Order ID</th>
+          <th>Customer</th>
+          <th>Product</th>
+          <th>Amount</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <span class="order-id">ORD-001</span>
+          </td>
+          <td>Sophie Martin</td>
+          <td>Le Coeur Bag</td>
+          <td>$1,290</td>
+          <td>
+            <span class="status-badge status-completed">Completed</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span class="order-id">ORD-002</span>
+          </td>
+          <td>Isabella Ross</td>
+          <td>Alaia Ballet Flats</td>
+          <td>$890</td>
+          <td>
+            <span class="status-badge status-processing">Processing</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span class="order-id">ORD-003</span>
+          </td>
+          <td>Elena Gilbert</td>
+          <td>Corset Belt</td>
+          <td>$650</td>
+          <td>
+            <span class="status-badge status-shipped">Shipped</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span class="order-id">ORD-004</span>
+          </td>
+          <td>Sarah Miller</td>
+          <td>Bombe Sandals</td>
+          <td>$1,150</td>
+          <td>
+            <span class="status-badge status-pending">Pending</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  
+  <script>
+    // Revenue Chart
+    const revenueCtx = document.getElementById('revenueChart').getContext('2d')
+    const revenueChart = new Chart(revenueCtx, {
+      type: 'line',
+      data: {
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
+        datasets: [
+          {
+            label: 'Revenue',
+            data: [4000, 3200, 2500, 3000, 2800, 2200, 3500],
+            borderColor: '#ffffff',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            pointBackgroundColor: '#ffffff',
+            pointBorderColor: '#ffffff',
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            tension: 0.4,
+            fill: false
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            max: 4000,
+            ticks: {
+              color: '#666666',
+              font: {
+                size: 11
+              },
+              callback: function (value) {
+                return '$' + value
+              }
+            },
+            grid: {
+              color: '#1a1a1a',
+              drawBorder: false
+            }
+          },
+          x: {
+            ticks: {
+              color: '#666666',
+              font: {
+                size: 11
+              }
+            },
+            grid: {
+              display: false
+            }
+          }
+        }
+      }
+    })
+    
+    // Sales by Category Chart
+    const categoryCtx = document.getElementById('categoryChart').getContext('2d')
+    const categoryChart = new Chart(categoryCtx, {
+      type: 'bar',
+      data: {
+        labels: ['Dresses', 'Shoes', 'Bags', 'Accessories'],
+        datasets: [
+          {
+            label: 'Sales',
+            data: [2800, 2200, 2200, 1400],
+            backgroundColor: ['#333333', '#2a2a2a', '#2a2a2a', '#242424'],
+            borderColor: 'transparent',
+            borderRadius: 4,
+            borderSkipped: false
+          }
+        ]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          }
+        },
+        scales: {
+          x: {
+            ticks: {
+              color: '#666666',
+              font: {
+                size: 11
+              },
+              callback: function (value) {
+                return '$' + value
+              }
+            },
+            grid: {
+              color: '#1a1a1a'
+            }
+          },
+          y: {
+            ticks: {
+              color: '#666666',
+              font: {
+                size: 11
+              }
+            },
+            grid: {
+              display: false
+            }
+          }
+        }
+      }
+    })
+  </script>
+{% endblock %}

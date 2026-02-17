@@ -1,0 +1,151 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VERIFICATION - THE ATELIER</title>
+    <link rel="stylesheet" href="{% static 'accounts/user/verify.css' %}" />
+  </head>
+
+  <body>
+    <div class="container">
+     
+      <div class="left-section">
+        <h1>VERIFICATION</h1>
+        <p class="subtitle">Enter the 6-digit code sent to your email.</p>
+
+        {% if messages %}
+          <div class="message-container">
+            {% for message in messages %}
+              <div class="alert {{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <form method="POST" id="otp-form">
+          {% csrf_token %}
+
+          <div class="form-group">
+            <label for="code1">Security Code</label>
+            <div class="code-input-group">
+              <input class="code-input" id="code1" maxlength="1" inputmode="numeric" placeholder="—" />
+              <input class="code-input" id="code2" maxlength="1" inputmode="numeric" placeholder="—" />
+              <input class="code-input" id="code3" maxlength="1" inputmode="numeric" placeholder="—" />
+              <input class="code-input" id="code4" maxlength="1" inputmode="numeric" placeholder="—" />
+              <input class="code-input" id="code5" maxlength="1" inputmode="numeric" placeholder="—" />
+              <input class="code-input" id="code6" maxlength="1" inputmode="numeric" placeholder="—" />
+            </div>
+          </div>
+
+          <input type="hidden" name="otp" id="final-otp" />
+
+          <button type="submit" class="verify-btn" id="verifyBtn" disabled>
+            Verify Code
+            <span>→</span>
+          </button>
+        </form>
+
+        <div class="resend-section">
+          <p>
+            Resend code in <span class="timer">1:00</span>
+          </p>
+          <a href="{% url 'resend_otp' %}" class="resend-link">Resend OTP</a>
+        </div>
+      </div>
+
+      <!-- RIGHT SECTION -->
+      <div class="right-section">
+        <div>
+          <h2>
+            VERIFY<br />
+            YOUR<br />
+            <span class="highlight">IDENTITY</span>
+          </h2>
+          <div class="red-line"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        const inputs = document.querySelectorAll('.code-input')
+        const finalOtp = document.getElementById('final-otp')
+        const verifyBtn = document.getElementById('verifyBtn')
+        const resendLink = document.querySelector('.resend-link')
+        const timerElement = document.querySelector('.timer')
+      
+        /* ---------------- OTP INPUT LOGIC ---------------- */
+      
+        function updateOTP() {
+          let otp = ''
+          inputs.forEach((input) => (otp += input.value))
+          finalOtp.value = otp
+      
+          if (otp.length === 6) {
+            verifyBtn.disabled = false
+          } else {
+            verifyBtn.disabled = true
+          }
+        }
+      
+        inputs.forEach((input, index) => {
+          input.addEventListener('input', function (e) {
+            this.value = this.value.replace(/[^0-9]/g, '')
+      
+            if (this.value && index < inputs.length - 1) {
+              inputs[index + 1].focus()
+            }
+      
+            updateOTP()
+          })
+      
+          input.addEventListener('keydown', function (e) {
+            if (e.key === 'Backspace' && !this.value && index > 0) {
+              inputs[index - 1].focus()
+            }
+          })
+      
+          // Paste full OTP
+          input.addEventListener('paste', function (e) {
+            e.preventDefault()
+            const pasteData = e.clipboardData.getData('text').replace(/\D/g, '')
+      
+            if (pasteData.length === 6) {
+              inputs.forEach((inp, i) => {
+                inp.value = pasteData[i]
+              })
+              updateOTP()
+            }
+          })
+        })
+      
+        /* ---------------- DISABLE BUTTON AFTER CLICK ---------------- */
+      
+        document.getElementById('otp-form').addEventListener('submit', function () {
+          verifyBtn.disabled = true
+          verifyBtn.innerText = 'Verifying...'
+        })
+      
+        /* ---------------- TIMER LOGIC ---------------- */
+      
+        let timeLeft = 60
+        resendLink.style.display = 'none'
+      
+        let timer = setInterval(function () {
+          timeLeft--
+      
+          let minutes = Math.floor(timeLeft / 60)
+          let seconds = timeLeft % 60
+          timerElement.textContent = minutes + ':' + (seconds < 10 ? '0' + seconds : seconds)
+      
+          if (timeLeft <= 0) {
+            clearInterval(timer)
+            timerElement.textContent = '0:00'
+            resendLink.style.display = 'inline'
+          }
+        }, 1000)
+      })
+    </script>
+  </body>
+</html>

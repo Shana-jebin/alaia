@@ -1,0 +1,235 @@
+{% extends 'user_profile/base_profile.html' %}
+{% load static %}
+
+{% block title %}
+  ALAIA - User Profile
+{% endblock %}
+
+{% block extra_css %}
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'user_profile/profile.css' %}" />
+{% endblock %}
+
+{% block profile_content %}
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="profile-card">
+        <!-- Profile Header -->
+        <div class="profile-header">
+          <div class="profile-header-content">
+            <div class="profile-image-wrapper">
+              <div class="profile-image-container">
+               {% if request.user.profile.image %}
+    <img src="{{ request.user.profile.image.url }}" 
+         alt="Profile"
+         class="profile-image"
+         id="profileImg" />
+{% else %}
+    <div class="default-avatar" id="profileImg">
+        {{ request.user.first_name|first|upper }}
+    </div>
+{% endif %}
+
+              </div>
+              <button class="edit-image-btn" onclick="triggerImageUpload()" title="Change profile photo">
+                <svg fill="none" viewBox="0 0 24 24">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke-linecap="round" stroke-linejoin="round" />
+                  <circle cx="12" cy="13" r="4" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
+   
+
+            </div>
+            <div class="profile-header-info">
+              <h1 class="profile-name" id="displayName">{{ request.user.first_name }} {{ request.user.last_name }}</h1>
+              <p class="member-since">
+    ALAIA Member since {{ request.user.date_joined|date:"F Y" }}
+</p>
+
+
+              <div class="profile-badges">
+                <span class="badge verified">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>Verified Account
+                </span>
+                <span class="badge premium">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                  </svg>Premium Member
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Profile Body -->
+        <div class="profile-body">
+          <!-- Display Mode -->
+          <div id="displayMode">
+            <h2 class="section-title">Personal Information</h2>
+            <div class="info-grid">
+              <div class="info-item">
+                <div class="info-label">
+                  <svg fill="none" viewBox="0 0 24 24">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke-linecap="round" stroke-linejoin="round" />
+                    <circle cx="12" cy="7" r="4" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>First Name
+                </div>
+                <div class="info-value" id="displayFirstName">{{ request.user.first_name }}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">
+                  <svg fill="none" viewBox="0 0 24 24">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke-linecap="round" stroke-linejoin="round" />
+                    <circle cx="12" cy="7" r="4" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>Last Name
+                </div>
+                <div class="info-value" id="displayLastName">{{ request.user.last_name }}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">
+                  <svg fill="none" viewBox="0 0 24 24">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke-linecap="round" stroke-linejoin="round" />
+                    <path d="m22 6-10 7L2 6" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>Email Address
+                </div>
+                <div class="info-value" id="displayEmail">{{ request.user.email }}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">
+                  <svg fill="none" viewBox="0 0 24 24">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>Phone Number
+                </div>
+                <div class="info-value" id="displayPhone">{{ request.user.profile.phone|default:'Not added yet' }}</div>
+              </div>
+            </div>
+            <div class="action-buttons">
+              <button class="btn btn-primary" onclick="enterEditMode()">
+                <svg class="btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>Edit Profile
+              </button>
+            </div>
+          </div>
+
+          <!-- Edit Mode -->
+          <div id="editMode" class="edit-mode">
+            <h2 class="section-title">Edit Information</h2>
+            <form method="POST" id="profileForm" class="form-grid" enctype="multipart/form-data">
+              {% csrf_token %}
+              <input 
+    type="file" 
+    name="image"
+    id="imageUpload" 
+    accept="image/*" 
+    style="display: none;" 
+    onchange="handleImageUpload(event)" 
+/>
+
+              <div class="form-group">
+                <label class="form-label">
+                  <svg fill="none" viewBox="0 0 24 24">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke-linecap="round" stroke-linejoin="round" />
+                    <circle cx="12" cy="7" r="4" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>First Name
+                </label>
+              <input 
+  type="text" 
+  class="form-input" 
+  name="first_name" 
+  value="{{ request.user.first_name }}" 
+  required
+  minlength="2"
+  oninvalid="this.setCustomValidity('First name is required')"
+  oninput="this.setCustomValidity('')"
+/>
+
+              </div>
+              <div class="form-group">
+  <label class="form-label">
+    Last Name
+  </label>
+  <input 
+  type="text" 
+  class="form-input" 
+  name="last_name" 
+  value="{{ request.user.last_name }}" 
+  required
+  minlength="1"
+  oninvalid="this.setCustomValidity('Last name is required')"
+  oninput="this.setCustomValidity('')"
+/>
+
+
+</div>
+
+<div class="form-group">
+  <label class="form-label">Email Address</label>
+
+  <input 
+    type="email" 
+    class="form-input" 
+    name="email" 
+    value="{{ request.user.email }}"
+    {% if is_google_user %}readonly{% endif %}
+    required
+  />
+
+  {% if is_google_user %}
+    <small style="color:red;">
+      Email cannot be edited because you signed in with Google.
+    </small>
+  {% endif %}
+</div>
+
+              <div class="form-group">
+                <label class="form-label">
+                  <svg fill="none" viewBox="0 0 24 24">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>Phone Number
+                </label>
+                <input type="tel" name="phone" value="{{ request.user.profile.phone|default:'' }}" class="form-input" />
+              </div>
+              <div class="action-buttons">
+              <button type="submit" class="btn btn-primary" id="saveBtn">
+                <svg class="btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>Save Changes
+              </button>
+              <button type="button" class="btn btn-secondary" onclick="cancelEditMode()">
+                <svg class="btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>Cancel
+              </button>
+            </div>
+            </form>
+            
+          </div>
+        </div>
+      </div>
+    </main>
+  
+
+  <!-- Notification -->
+  <div id="notification" class="notification">
+    <svg class="notification-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+    </svg>
+    <span id="notificationText">Success!</span>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'user_profile/profile.js' %}"></script>
+
+  {% if is_google_user and not request.user.first_name or is_google_user and not request.user.last_name %}
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        enterEditMode();
+    });
+  </script>
+  {% endif %}
+{% endblock %}

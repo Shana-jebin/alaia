@@ -1,0 +1,183 @@
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Cormorant Garamond', 'Georgia', serif;
+            color: #333;
+        }
+
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 60px 80px;
+            background: #f8f8f8;
+        }
+
+        .page-header {
+            margin-bottom: 50px;
+        }
+
+        .page-header h1 {
+            font-size: 42px;
+            font-weight: 400;
+            margin-bottom: 12px;
+            color: #000;
+        }
+
+        .page-header p {
+            font-size: 16px;
+            color: #666;
+            font-family: 'Arial', sans-serif;
+        }
+
+        /* Form Styling */
+        .address-form {
+            background: white;
+            border-radius: 12px;
+            padding: 48px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        .form-group {
+            margin-bottom: 32px;
+        }
+
+        .form-group label {
+            display: block;
+            font-family: 'Arial', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 16px 18px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            font-family: 'Arial', sans-serif;
+            transition: all 0.3s ease;
+            background: #fafafa;
+            color: #333;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #333;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
+        }
+
+        .form-group input::placeholder {
+            color: #bbb;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .checkbox-container {
+            margin: 36px 0;
+            padding: 20px;
+            background: #f8f8f8;
+            border-radius: 10px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 22px;
+            height: 22px;
+            cursor: pointer;
+            accent-color: #000;
+        }
+
+        .checkbox-group label {
+            font-family: 'Arial', sans-serif;
+            font-size: 15px;
+            color: #333;
+            cursor: pointer;
+            margin: 0;
+            text-transform: none;
+            letter-spacing: 0;
+            font-weight: 400;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 16px;
+            margin-top: 48px;
+            justify-content: flex-end;
+            padding-top: 32px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .btn {
+            padding: 16px 40px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-family: 'Arial', sans-serif;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            letter-spacing: 0.3px;
+        }
+
+        .btn-cancel {
+            background: white;
+            color: #666;
+            border: 1px solid #e0e0e0;
+        }
+
+        .btn-cancel:hover {
+            background: #f5f5f5;
+            color: #000;
+            border-color: #d0d0d0;
+        }
+
+        .btn-save {
+            background: #000;
+            color: white;
+        }
+
+        .btn-save:hover {
+            background: #333;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+           
+            .main-content {
+                margin-left: 0;
+                padding: 40px 20px;
+            }
+
+            .address-form {
+                padding: 32px 24px;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    

@@ -1,0 +1,107 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      {% block title %}
+        ALAIA - Admin
+      {% endblock %}
+    </title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link rel="stylesheet" href="{% static 'adminpanel/base.css' %}" />
+    {% block extra_css %}
+
+    {% endblock %}
+  </head>
+
+  <body>
+    <div class="container">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="logo">
+          <h1>ALAIA <span class="logo-dot"></span></h1>
+          <p>Admin Panel</p>
+        </div>
+
+        <nav class="nav-menu">
+          <a href="{% url 'admin_dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
+            <span class="icon">📊</span>
+            <span>Dashboard</span>
+          </a>
+
+          <a href="{% url 'user_management' %}" class="nav-item {% if request.resolver_match.url_name == 'user_management' %}active{% endif %}">
+            <span class="icon">👥</span>
+            <span>Users</span>
+          </a>
+
+          <a href="#" class="nav-item">
+            <span class="icon">📦</span>
+            <span>Products</span>
+          </a>
+          <a href="{% url 'admin_category_list' %}" class="nav-item {% if request.resolver_match.url_name in 'admin_category_list add_category edit_category delete_category' %}active{% endif %}">
+            <span class="icon">🏷️</span>
+            <span>Categories</span>
+          </a>
+
+          <a href="#" class="nav-item">
+            <span class="icon">🏢</span>
+            <span>Brands</span>
+          </a>
+          <a href="#" class="nav-item">
+            <span class="icon">📋</span>
+            <span>Orders</span>
+          </a>
+          <a href="#" class="nav-item">
+            <span class="icon">%</span>
+            <span>Offers</span>
+          </a>
+          <a href="#" class="nav-item">
+            <span class="icon">🎫</span>
+            <span>Coupons</span>
+          </a>
+          <a href="#" class="nav-item">
+            <span class="icon">💳</span>
+            <span>Payments</span>
+          </a>
+          <a href="#" class="nav-item">
+            <span class="icon">⭐</span>
+            <span>Reviews</span>
+          </a>
+          <a href="#" class="nav-item">
+            <span class="icon">🎧</span>
+            <span>Support</span>
+          </a>
+        </nav>
+
+        <div class="sign-out">
+          <button class="sign-out-btn">
+            <span>→</span>
+            <span>Sign Out</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <div class="header">
+          <h1 class="header-title">
+            {% block page_title %}
+              Dashboard
+            {% endblock %}
+          </h1>
+        </div>
+
+        {% block content %}
+
+        {% endblock %}
+      </main>
+    </div>
+
+    {% block extra_js %}
+
+    {% endblock %}
+  </body>
+</html>

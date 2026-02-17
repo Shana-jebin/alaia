@@ -1,0 +1,429 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'products/shop.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="shop-page">
+
+
+   <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Sidebar Filter -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2 class="sidebar-title">Filters</h2>
+            <button class="sidebar-close" id="sidebarClose">&times;</button>
+        </div>
+
+        <form method="GET" action="/shop/" id="filterForm">
+            <!-- Category Filter -->
+            <div class="filter-section">
+                <div class="filter-label">Category</div>
+                <div class="category-options">
+                    <button type="button" class="category-btn active" data-category="all">All</button>
+                    <button type="button" class="category-btn" data-category="men">Men</button>
+                    <button type="button" class="category-btn" data-category="women">Women</button>
+                    <button type="button" class="category-btn" data-category="kids">Kids</button>
+                </div>
+                <input type="hidden" name="category" id="categoryInput" value="all">
+            </div>
+
+            <!-- Brand Filter -->
+            <div class="filter-section">
+                <div class="filter-label">Brand</div>
+                <div class="brand-options">
+                    <label class="checkbox-wrapper">
+                        <input type="checkbox" name="brand" value="premium_sole">
+                        <span class="checkbox-label">Premium Sole</span>
+                    </label>
+                    <label class="checkbox-wrapper">
+                        <input type="checkbox" name="brand" value="urban_stride">
+                        <span class="checkbox-label">Urban Stride</span>
+                    </label>
+                    <label class="checkbox-wrapper">
+                        <input type="checkbox" name="brand" value="comfort_walk">
+                        <span class="checkbox-label">Comfort Walk</span>
+                    </label>
+                    <label class="checkbox-wrapper">
+                        <input type="checkbox" name="brand" value="elegance_feet">
+                        <span class="checkbox-label">Elegance Feet</span>
+                    </label>
+                    <label class="checkbox-wrapper">
+                        <input type="checkbox" name="brand" value="classic_step">
+                        <span class="checkbox-label">Classic Step</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Price Range Filter -->
+            <div class="filter-section">
+                <div class="filter-label">Price Range</div>
+                <div class="price-inputs">
+                    <input type="number" class="price-input" name="min_price" placeholder="Min ₹" min="0">
+                    <input type="number" class="price-input" name="max_price" placeholder="Max ₹" min="0">
+                </div>
+            </div>
+
+            <!-- Filter Actions -->
+            <div class="filter-actions">
+                <button type="submit" class="apply-filter">Apply</button>
+                <button type="button" class="clear-filter" id="clearFilter">Clear All</button>
+            </div>
+        </form>
+    </aside>
+
+    <!-- Top Bar -->
+    <section class="top-bar">
+        <div class="container">
+            <div class="top-bar-content">
+                <button class="filter-toggle" id="filterToggle">Filter</button>
+                
+                <div class="search-wrapper">
+                    <input type="text" class="search-bar" id="searchBar" name="search" placeholder="Search for chappals..." autocomplete="off">
+                    <button class="search-clear" id="searchClear">&times;</button>
+                </div>
+
+                <div class="sort-wrapper">
+                    <select class="sort-select" id="sortSelect" name="sort">
+                        <option value="recommended">Recommended</option>
+                        <option value="price_low">Price: Low to High</option>
+                        <option value="price_high">Price: High to Low</option>
+                        <option value="name_asc">Name: A–Z</option>
+                        <option value="name_desc">Name: Z–A</option>
+                        <option value="rating">Rating: High to Low</option>
+                        <option value="newest">Newest First</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <div class="results-bar">
+                <div class="results-count">
+                    Showing <strong>24</strong> of <strong>128</strong> products
+                </div>
+            </div>
+
+            <!-- Product Grid -->
+            <div class="product-grid">
+                <!-- Product Card 1 -->
+                <article class="product-card">
+                    <div class="product-image-wrapper">
+                        <span class="discount-badge">25% OFF</span>
+                        <button class="wishlist-btn" aria-label="Add to wishlist">♡</button>
+                        <img src="https://images.unsplash.com/photo-1603487742131-4160ec999306?w=600&h=800&fit=crop" alt="Classic Leather Chappal" class="product-image">
+                    </div>
+                    <div class="product-info">
+                        <div class="product-brand">Premium Sole</div>
+                        <h3 class="product-name">Classic Leather Chappal</h3>
+                        <div class="product-rating">
+                            <span class="stars">★★★★★</span>
+                            <span class="review-count">(248)</span>
+                        </div>
+                        <div class="product-pricing">
+                            <span class="current-price">₹1,499</span>
+                            <span class="original-price">₹1,999</span>
+                        </div>
+                        <button class="view-details-btn">View Details</button>
+                    </div>
+                </article>
+
+                <!-- Product Card 2 -->
+                <article class="product-card">
+                    <div class="product-image-wrapper">
+                        <button class="wishlist-btn" aria-label="Add to wishlist">♡</button>
+                        <img src="https://images.unsplash.com/photo-1560343090-f0409e92791a?w=600&h=800&fit=crop" alt="Urban Comfort Slide" class="product-image">
+                    </div>
+                    <div class="product-info">
+                        <div class="product-brand">Urban Stride</div>
+                        <h3 class="product-name">Urban Comfort Slide</h3>
+                        <div class="product-rating">
+                            <span class="stars">★★★★☆</span>
+                            <span class="review-count">(156)</span>
+                        </div>
+                        <div class="product-pricing">
+                            <span class="current-price">₹899</span>
+                        </div>
+                        <button class="view-details-btn">View Details</button>
+                    </div>
+                </article>
+
+                <!-- Product Card 3 -->
+                <article class="product-card">
+                    <div class="product-image-wrapper">
+                        <span class="discount-badge">15% OFF</span>
+                        <button class="wishlist-btn" aria-label="Add to wishlist">♡</button>
+                        <img src="https://images.unsplash.com/photo-1582897085656-c15e4d6d2a4d?w=600&h=800&fit=crop" alt="Elegance Strap Sandal" class="product-image">
+                    </div>
+                    <div class="product-info">
+                        <div class="product-brand">Elegance Feet</div>
+                        <h3 class="product-name">Elegance Strap Sandal</h3>
+                        <div class="product-rating">
+                            <span class="stars">★★★★★</span>
+                            <span class="review-count">(312)</span>
+                        </div>
+                        <div class="product-pricing">
+                            <span class="current-price">₹1,699</span>
+                            <span class="original-price">₹1,999</span>
+                        </div>
+                        <button class="view-details-btn">View Details</button>
+                    </div>
+                </article>
+
+                <!-- Product Card 4 -->
+                <article class="product-card">
+                    <div class="product-image-wrapper">
+                        <button class="wishlist-btn" aria-label="Add to wishlist">♡</button>
+                        <img src="https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=600&h=800&fit=crop" alt="Casual Daily Wear" class="product-image">
+                    </div>
+                    <div class="product-info">
+                        <div class="product-brand">Comfort Walk</div>
+                        <h3 class="product-name">Casual Daily Wear</h3>
+                        <div class="product-rating">
+                            <span class="stars">★★★★☆</span>
+                            <span class="review-count">(89)</span>
+                        </div>
+                        <div class="product-pricing">
+                            <span class="current-price">₹599</span>
+                        </div>
+                        <button class="view-details-btn">View Details</button>
+                    </div>
+                </article>
+
+                <!-- Product Card 5 -->
+                <article class="product-card">
+                    <div class="product-image-wrapper">
+                        <span class="discount-badge">30% OFF</span>
+                        <button class="wishlist-btn" aria-label="Add to wishlist">♡</button>
+                        <img src="https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=600&h=800&fit=crop" alt="Premium Suede Chappal" class="product-image">
+                    </div>
+                    <div class="product-info">
+                        <div class="product-brand">Classic Step</div>
+                        <h3 class="product-name">Premium Suede Chappal</h3>
+                        <div class="product-rating">
+                            <span class="stars">★★★★★</span>
+                            <span class="review-count">(421)</span>
+                        </div>
+                        <div class="product-pricing">
+                            <span class="current-price">₹2,099</span>
+                            <span class="original-price">₹2,999</span>
+                        </div>
+                        <button class="view-details-btn">View Details</button>
+                    </div>
+                </article>
+
+                <!-- Product Card 6 -->
+                <article class="product-card">
+                    <div class="product-image-wrapper">
+                        <button class="wishlist-btn" aria-label="Add to wishlist">♡</button>
+                        <img src="https://images.unsplash.com/photo-1551107696-a4b0c5a0d9a2?w=600&h=800&fit=crop" alt="Sport Active Slide" class="product-image">
+                    </div>
+                    <div class="product-info">
+                        <div class="product-brand">Urban Stride</div>
+                        <h3 class="product-name">Sport Active Slide</h3>
+                        <div class="product-rating">
+                            <span class="stars">★★★★☆</span>
+                            <span class="review-count">(178)</span>
+                        </div>
+                        <div class="product-pricing">
+                            <span class="current-price">₹1,299</span>
+                        </div>
+                        <button class="view-details-btn">View Details</button>
+                    </div>
+                </article>
+
+                <!-- Product Card 7 -->
+                <article class="product-card">
+                    <div class="product-image-wrapper">
+                        <span class="discount-badge">20% OFF</span>
+                        <button class="wishlist-btn" aria-label="Add to wishlist">♡</button>
+                        <img src="https://images.unsplash.com/photo-1612902376799-0c4f64c6e3e0?w=600&h=800&fit=crop" alt="Designer T-Strap Sandal" class="product-image">
+                    </div>
+                    <div class="product-info">
+                        <div class="product-brand">Premium Sole</div>
+                        <h3 class="product-name">Designer T-Strap Sandal</h3>
+                        <div class="product-rating">
+                            <span class="stars">★★★★★</span>
+                            <span class="review-count">(267)</span>
+                        </div>
+                        <div class="product-pricing">
+                            <span class="current-price">₹1,999</span>
+                            <span class="original-price">₹2,499</span>
+                        </div>
+                        <button class="view-details-btn">View Details</button>
+                    </div>
+                </article>
+
+                <!-- Product Card 8 -->
+                <article class="product-card">
+                    <div class="product-image-wrapper">
+                        <button class="wishlist-btn" aria-label="Add to wishlist">♡</button>
+                        <img src="https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=600&h=800&fit=crop" alt="Minimalist Flip Flop" class="product-image">
+                    </div>
+                    <div class="product-info">
+                        <div class="product-brand">Comfort Walk</div>
+                        <h3 class="product-name">Minimalist Flip Flop</h3>
+                        <div class="product-rating">
+                            <span class="stars">★★★★☆</span>
+                            <span class="review-count">(134)</span>
+                        </div>
+                        <div class="product-pricing">
+                            <span class="current-price">₹799</span>
+                        </div>
+                        <button class="view-details-btn">View Details</button>
+                    </div>
+                </article>
+            </div>
+
+            <!-- Pagination -->
+            <nav class="pagination" aria-label="Product pagination">
+                <button class="page-btn page-arrow" aria-label="Previous page">‹</button>
+                <button class="page-btn active" aria-label="Page 1">1</button>
+                <button class="page-btn" aria-label="Page 2">2</button>
+                <button class="page-btn" aria-label="Page 3">3</button>
+                <button class="page-btn" aria-label="Page 4">4</button>
+                <button class="page-btn" aria-label="Page 5">5</button>
+                <button class="page-btn page-arrow" aria-label="Next page">›</button>
+            </nav>
+        </div>
+    </main>
+     </div>
+    {% endblock %}
+{% block extra_js %}
+   
+   
+    
+
+    <script>
+        // Sidebar Toggle
+        const filterToggle = document.getElementById('filterToggle');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarClose = document.getElementById('sidebarClose');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+        function openSidebar() {
+            sidebar.classList.add('active');
+            sidebarOverlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeSidebar() {
+            sidebar.classList.remove('active');
+            sidebarOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        filterToggle.addEventListener('click', openSidebar);
+        sidebarClose.addEventListener('click', closeSidebar);
+        sidebarOverlay.addEventListener('click', closeSidebar);
+
+        // Category Selection
+        const categoryBtns = document.querySelectorAll('.category-btn');
+        const categoryInput = document.getElementById('categoryInput');
+
+        categoryBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                categoryBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                categoryInput.value = btn.dataset.category;
+            });
+        });
+
+        // Clear Filter
+        const clearFilterBtn = document.getElementById('clearFilter');
+        const filterForm = document.getElementById('filterForm');
+
+        clearFilterBtn.addEventListener('click', () => {
+            filterForm.reset();
+            categoryBtns.forEach(b => b.classList.remove('active'));
+            categoryBtns[0].classList.add('active');
+            categoryInput.value = 'all';
+        });
+
+        // Search Clear Button
+        const searchBar = document.getElementById('searchBar');
+        const searchClear = document.getElementById('searchClear');
+
+        searchClear.addEventListener('click', () => {
+            searchBar.value = '';
+            searchBar.focus();
+        });
+
+        // Search and Sort functionality (for demonstration)
+        searchBar.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            console.log('Searching for:', searchTerm);
+            // In Django, this would trigger a GET request with ?search=searchTerm
+        });
+
+        const sortSelect = document.getElementById('sortSelect');
+        sortSelect.addEventListener('change', function() {
+            console.log('Sorting by:', this.value);
+            // In Django, this would trigger a GET request with ?sort=value
+            // Example: window.location.href = `?sort=${this.value}`;
+        });
+
+        // Wishlist Toggle
+        const wishlistBtns = document.querySelectorAll('.wishlist-btn');
+        wishlistBtns.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                this.innerHTML = this.innerHTML === '♡' ? '♥' : '♡';
+                // In Django, this would send an AJAX request to add/remove from wishlist
+            });
+        });
+
+        // Pagination
+        const pageBtns = document.querySelectorAll('.page-btn:not(.page-arrow)');
+        pageBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                pageBtns.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                // In Django: window.location.href = `?page=${this.textContent}`;
+            });
+        });
+
+        // Arrow pagination
+        const prevBtn = document.querySelector('.page-arrow:first-of-type');
+        const nextBtn = document.querySelector('.page-arrow:last-of-type');
+
+        prevBtn.addEventListener('click', function() {
+            const activePage = document.querySelector('.page-btn.active');
+            const prevPage = activePage.previousElementSibling;
+            if (prevPage && prevPage.classList.contains('page-btn') && !prevPage.classList.contains('page-arrow')) {
+                pageBtns.forEach(b => b.classList.remove('active'));
+                prevPage.classList.add('active');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+
+        nextBtn.addEventListener('click', function() {
+            const activePage = document.querySelector('.page-btn.active');
+            const nextPage = activePage.nextElementSibling;
+            if (nextPage && nextPage.classList.contains('page-btn') && !nextPage.classList.contains('page-arrow')) {
+                pageBtns.forEach(b => b.classList.remove('active'));
+                nextPage.classList.add('active');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+
+        // View Details Button (for demonstration)
+        const viewDetailsBtns = document.querySelectorAll('.view-details-btn');
+        viewDetailsBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                // In Django, this would navigate to product detail page
+                console.log('Viewing details for:', this.closest('.product-card').querySelector('.product-name').textContent);
+                // Example: window.location.href = `/product/${productId}/`;
+            });
+        });
+    </script>
+
+    {% endblock %}
+   
