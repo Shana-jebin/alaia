@@ -1,0 +1,351 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #0d0d0d;
+    color: #ffffff;
+    font-family: 'Segoe UI', sans-serif;
+    min-height: 100vh;
+}
+
+.top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 32px;
+    border-bottom: 1px solid #1e1e1e;
+    background-color: #111;
+    margin-bottom: 20px;
+}
+
+.top-bar h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.btn-add {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background-color: #e63946;
+    color: #fff;
+    border: none;
+    padding: 9px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.2s;
+}
+
+.btn-add:hover {
+    background-color: #c62b38;
+}
+
+.btn-add span {
+    font-size: 18px;
+    line-height: 1;
+}
+
+/* ─── Main Content ─── */
+.main-content {
+    padding: 32px;
+    width: 100%;
+}
+
+/* ─── Search Bar ─── */
+.search-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 24px;
+}
+
+.search-input {
+    flex: 1;
+    max-width: 400px;
+    background-color: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    color: #fff;
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.search-input::placeholder {
+    color: #555;
+}
+
+.search-input:focus {
+    border-color: #e63946;
+}
+
+.search-input-wrap {
+    position: relative;
+    flex: 1;
+    max-width: 400px;
+}
+
+.search-input {
+    width: 100%;
+    max-width: 100%;
+}
+
+.clear-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #555;
+    font-size: 16px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    display: none;
+}
+
+.clear-btn:hover {
+    color: #fff;
+}
+
+/* ─── Table ─── */
+.table-container {
+    background-color: #141414;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #1e1e1e;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+thead tr {
+    background-color: #1a1a1a;
+}
+
+th {
+    padding: 14px 20px;
+    text-align: left;
+    font-size: 13px;
+    font-weight: 500;
+    color: #888;
+    letter-spacing: 0.4px;
+}
+
+tbody tr {
+    border-top: 1px solid #1e1e1e;
+    transition: background 0.15s;
+}
+
+tbody tr:hover {
+    background-color: #1c1c1c;
+}
+
+td {
+    padding: 14px 20px;
+    font-size: 14px;
+    color: #ddd;
+}
+
+/* Logo Avatar */
+.logo-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 6px;
+    background-color: #2a2a2a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #ccc;
+    letter-spacing: 0.5px;
+}
+
+/* Brand Name */
+.brand-name {
+    font-weight: 700;
+    color: #ffffff;
+}
+
+/* Actions */
+.action-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #888;
+    padding: 6px 8px;
+    border-radius: 5px;
+    font-size: 15px;
+    transition: color 0.2s, background 0.2s;
+}
+
+.action-btn:hover {
+    color: #fff;
+    background-color: #2a2a2a;
+}
+
+.action-btn.delete:hover {
+    color: #e63946;
+}
+
+/* ─── Pagination ─── */
+.pagination-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    margin-top: 30px;
+}
+
+.page-btn {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    border: 1px solid #2a2a2a;
+    background-color: #1a1a1a;
+    color: #aaa;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.page-btn:hover {
+    background-color: #2a2a2a;
+    color: #fff;
+}
+
+.page-btn.active {
+    background-color: #e63946;
+    border-color: #e63946;
+    color: #fff;
+}
+
+.page-btn.dots {
+    cursor: default;
+    border: none;
+    background: none;
+    color: #555;
+}
+
+.page-btn.nav {
+    font-size: 16px;
+}
+
+/* No results */
+.no-results {
+    text-align: center;
+    padding: 50px 20px;
+    color: #555;
+    font-size: 15px;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.modal-box {
+    background: #141414;
+    width: 420px;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 0 25px rgba(0,0,0,0.6);
+    animation: fadeIn 0.3s ease;
+}
+
+.modal-box h3 {
+    margin-bottom: 20px;
+}
+
+.modal-box input {
+    width: 100%;
+    padding: 10px;
+    background: #1e1e1e;
+    border: 1px solid #333;
+    color: white;
+    border-radius: 6px;
+    margin-bottom: 15px;
+}
+
+.modal-box button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.modal-save {
+    background: #e63946;
+    color: white;
+}
+
+.modal-cancel {
+    background: #444;
+    color: white;
+    margin-left: 10px;
+}
+
+@keyframes fadeIn {
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+
+
+/* Remove box style from Django messages */
+
+.alert{
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 5px 0 !important;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* success text */
+.alert-success{
+    color: #4CAF50 !important;
+}
+
+/* error text */
+.alert-error{
+    color: #ff4d4f !important;
+}
+
+
+@keyframes fadeIn{
+    from{opacity:0; transform:translateY(-10px);}
+    to{opacity:1; transform:translateY(0);}
+}

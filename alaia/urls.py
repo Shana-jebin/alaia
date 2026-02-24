@@ -19,13 +19,14 @@ from django.urls import path,include
 from django.conf import settings
 from django.conf.urls.static import static
 
+
 urlpatterns = [
     path('admin-secret/', admin.site.urls),  
     path('accounts/', include('allauth.urls')),
     path('', include('accounts.urls')),
     path('admin-panel/', include('adminpanel.urls')),
     path('profile/', include('user_profile.urls')),
-    path('', include('products.urls')),
+    path('products/', include('products.urls')),
     path('', include('core.urls')), 
 
 ]

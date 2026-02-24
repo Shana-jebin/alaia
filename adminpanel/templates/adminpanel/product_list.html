@@ -1,0 +1,1571 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Management — ALAÏA Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #0a0a0a;
+            --sidebar-bg: #111111;
+            --surface: #1a1a1a;
+            --surface2: #222222;
+            --border: #2a2a2a;
+            --border-light: #333;
+            --text: #f0f0f0;
+            --text-muted: #888;
+            --text-dim: #555;
+            --accent: #e53935;
+            --accent-hover: #c62828;
+            --green: #4caf50;
+            --orange: #ff9800;
+            --red: #e53935;
+            --modal-bg: #141414;
+            --input-bg: #1e1e1e;
+            --input-border: #2e2e2e;
+            --input-focus: #3a3a3a;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ── MAIN ── */
+        .main {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 24px 32px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg);
+        }
+
+        .topbar h2 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 22px;
+            font-weight: 600;
+        }
+
+        .topbar p { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+
+        .btn-add {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.15s;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .btn-add:hover { background: var(--accent-hover); }
+
+        /* ── CONTENT ── */
+        .content { flex: 1; overflow-y: auto; padding: 28px 32px; }
+
+        /* Stats row */
+        .stats-row {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px 20px;
+            flex: 1;
+        }
+
+        .stat-card .label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-card .value { font-size: 26px; font-weight: 600; font-family: 'Space Grotesk', sans-serif; margin-top: 4px; }
+        .stat-card.total .value { color: var(--text); }
+        .stat-card.active .value { color: var(--green); }
+        .stat-card.inactive .value { color: var(--text-muted); }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .search-wrap {
+            position: relative;
+            flex: 1;
+            max-width: 420px;
+        }
+
+        .search-wrap svg {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-dim);
+            width: 16px;
+            height: 16px;
+        }
+
+        .search-input {
+            width: 100%;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 14px;
+            padding: 9px 12px 9px 38px;
+            outline: none;
+            transition: border-color 0.15s;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .search-input::placeholder { color: var(--text-dim); }
+        .search-input:focus { border-color: var(--border-light); }
+
+        .btn-deleted {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 9px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-family: 'DM Sans', sans-serif;
+            text-decoration: none;
+        }
+
+        .btn-deleted:hover { border-color: var(--border-light); color: var(--text); }
+
+        /* ── TABLE ── */
+        .table-wrap {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+
+        thead tr { background: var(--surface2); }
+
+        th {
+            text-align: left;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-muted);
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 16px 16px;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+            vertical-align: middle;
+        }
+
+        tbody tr:last-child td { border-bottom: none; }
+
+        tbody tr { transition: background 0.1s; }
+        tbody tr:hover { background: rgba(255,255,255,0.025); }
+
+        /* Product cell */
+        .product-cell { display: flex; align-items: center; gap: 14px; }
+
+        .product-thumb {
+            width: 42px;
+            height: 42px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .product-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+        .product-thumb svg { width: 20px; height: 20px; color: var(--text-dim); }
+
+        .product-name { font-weight: 500; color: var(--text); }
+        .product-brand { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+
+        /* Stock badge */
+        .stock-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 500;
+            border: 1px solid;
+        }
+
+        .stock-badge.ok { border-color: var(--border); color: var(--text-muted); }
+        .stock-badge.low { border-color: var(--orange); color: var(--orange); }
+        .stock-badge.zero { border-color: var(--red); color: var(--red); }
+
+        /* Status badge */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .status-badge::before {
+            content: '';
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .status-badge.active { color: var(--green); }
+        .status-badge.inactive { color: var(--text-muted); }
+
+        /* Actions */
+        .actions-cell { display: flex; align-items: center; gap: 6px; }
+
+        .action-btn {
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: all 0.15s;
+        }
+
+        .action-btn:hover { border-color: var(--border-light); color: var(--text); background: var(--surface2); }
+        .action-btn.delete:hover { border-color: #c62828; color: var(--red); background: rgba(229,57,53,0.08); }
+        .action-btn svg { width: 15px; height: 15px; }
+
+        /* ── MODAL ── */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+        .modal {
+            background: var(--modal-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            width: 100%;
+            max-width: 680px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            transform: translateY(12px);
+            transition: transform 0.2s;
+            box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+        }
+
+        .modal-overlay.open .modal { transform: translateY(0); }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 22px 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-header h3 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 17px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: all 0.15s;
+        }
+
+        .modal-close:hover { color: var(--text); }
+        .modal-close svg { width: 14px; height: 14px; }
+
+        .modal-body { overflow-y: auto; padding: 24px; flex: 1; }
+
+        .modal-footer {
+            padding: 18px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        /* Form */
+        .section-title {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-muted);
+            margin-bottom: 14px;
+            margin-top: 24px;
+        }
+
+        .section-title:first-child { margin-top: 0; }
+
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .form-grid.full { grid-template-columns: 1fr; }
+
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-group.span2 { grid-column: span 2; }
+
+        .form-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+            letter-spacing: 0.3px;
+        }
+
+        .required { color: var(--accent); margin-left: 2px; }
+
+        .form-input,
+        .form-select,
+        .form-textarea {
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 13.5px;
+            padding: 9px 12px;
+            outline: none;
+            transition: border-color 0.15s;
+            font-family: 'DM Sans', sans-serif;
+            width: 100%;
+        }
+
+        .form-input::placeholder,
+        .form-textarea::placeholder { color: var(--text-dim); }
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus { border-color: var(--border-light); }
+
+        .form-textarea { resize: vertical; min-height: 90px; }
+
+        .form-select { cursor: pointer; }
+        .form-select option { background: var(--surface); }
+
+        /* Toggle checkbox row */
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 0;
+        }
+
+        .toggle-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .toggle-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
+        .toggle-label { font-size: 13px; color: var(--text-muted); }
+
+        /* Variants */
+        .variants-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+
+        .btn-add-variant {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: transparent;
+            border: 1px dashed var(--border-light);
+            color: var(--text-muted);
+            padding: 7px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .btn-add-variant:hover { border-color: var(--accent); color: var(--accent); }
+
+        .variant-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .variant-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+
+        .variant-card-title {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .btn-remove-variant {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: transparent;
+            border: none;
+            color: var(--red);
+            font-size: 12px;
+            cursor: pointer;
+            padding: 0;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .btn-remove-variant:hover { opacity: 0.75; }
+
+        /* Image upload */
+        .image-upload-area {
+            border: 1px dashed var(--border-light);
+            border-radius: 6px;
+            padding: 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.15s, background 0.15s;
+        }
+
+        .image-upload-area:hover { border-color: var(--accent); background: rgba(229,57,53,0.03); }
+
+        .image-upload-area svg { width: 22px; height: 22px; color: var(--text-dim); margin-bottom: 6px; }
+        .image-upload-area p { font-size: 13px; color: var(--text-muted); }
+        .image-upload-area span { font-size: 11px; color: var(--text-dim); }
+
+        .upload-preview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .upload-preview-item {
+            width: 64px;
+            height: 64px;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+
+        .upload-preview-item img { width: 100%; height: 100%; object-fit: cover; }
+
+        .upload-preview-item .remove-img {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+            color: #fff;
+        }
+
+        .upload-preview-item:hover .remove-img { display: flex; }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            border: 1px solid;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            border-color: var(--border);
+            color: var(--text-muted);
+        }
+
+        .btn-ghost:hover { border-color: var(--border-light); color: var(--text); }
+
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Confirm modal */
+        .confirm-modal {
+            background: var(--modal-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 28px;
+            max-width: 380px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+        }
+
+        .confirm-modal .icon {
+            width: 52px;
+            height: 52px;
+            background: rgba(229,57,53,0.12);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+        }
+
+        .confirm-modal .icon svg { width: 24px; height: 24px; color: var(--red); }
+        .confirm-modal h4 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+        .confirm-modal p { font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 20px; }
+        .confirm-modal .confirm-note {
+            font-size: 11px;
+            color: var(--orange);
+            background: rgba(255,152,0,0.08);
+            border: 1px solid rgba(255,152,0,0.2);
+            border-radius: 5px;
+            padding: 8px 12px;
+            margin-bottom: 20px;
+        }
+
+        .confirm-modal .btn-row { display: flex; gap: 10px; justify-content: center; }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13.5px;
+            z-index: 9999;
+            transform: translateY(80px);
+            transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+            max-width: 320px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+
+        .toast.show { transform: translateY(0); }
+        .toast.success { border-left: 3px solid var(--green); }
+        .toast.error { border-left: 3px solid var(--red); }
+
+        .toast .t-icon { width: 18px; height: 18px; flex-shrink: 0; }
+        .toast.success .t-icon { color: var(--green); }
+        .toast.error .t-icon { color: var(--red); }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-dim);
+        }
+
+        .empty-state svg { width: 40px; height: 40px; margin-bottom: 12px; }
+        .empty-state p { font-size: 14px; }
+
+        /* View tabs */
+        .view-tabs {
+            display: flex;
+            gap: 4px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 4px;
+        }
+
+        .view-tab {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 7px 14px;
+            border-radius: 5px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            text-decoration: none;
+            color: var(--text-muted);
+            border: none;
+            background: transparent;
+            font-family: 'DM Sans', sans-serif;
+            white-space: nowrap;
+        }
+
+        .view-tab svg { width: 14px; height: 14px; }
+
+        .view-tab:hover { color: var(--text); background: var(--surface2); }
+
+        .view-tab.active {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border-light);
+        }
+
+        .view-tab .tab-count {
+            font-size: 11px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 1px 7px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .view-tab.active .tab-count {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        /* Deleted row style */
+        tr.deleted-row td { opacity: 0.55; }
+        tr.deleted-row .product-name { text-decoration: line-through; }
+        .restore-btn { color: var(--green) !important; border-color: rgba(76,175,80,0.3) !important; }
+        .restore-btn:hover { background: rgba(76,175,80,0.08) !important; border-color: var(--green) !important; }
+
+        /* Search cancel btn */
+        .search-cancel {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--surface2);
+            border: none;
+            border-radius: 4px;
+            width: 20px;
+            height: 20px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: color 0.15s;
+            padding: 0;
+        }
+        .search-cancel:hover { color: var(--text); }
+        .search-cancel.visible { display: flex; }
+        .search-cancel svg { width: 11px; height: 11px; }
+        .search-input { padding-right: 34px; }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 20px;
+            padding: 0 2px;
+        }
+
+        .pagination-info {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .pagination-info strong { color: var(--text); }
+
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .page-btn {
+            min-width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            text-decoration: none;
+            padding: 0 10px;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .page-btn:hover { border-color: var(--border-light); color: var(--text); background: var(--surface2); }
+        .page-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; cursor: default; }
+        .page-btn.disabled { opacity: 0.35; pointer-events: none; cursor: default; }
+        .page-btn svg { width: 14px; height: 14px; }
+
+        .page-dots {
+            font-size: 13px;
+            color: var(--text-dim);
+            padding: 0 4px;
+            user-select: none;
+        }
+
+        /* per-page select */
+        .per-page-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .per-page-select {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 13px;
+            padding: 5px 10px;
+            outline: none;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            transition: border-color 0.15s;
+        }
+
+        .per-page-select:focus { border-color: var(--border-light); }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
+    </style>
+</head>
+<body>
+
+<!-- ── MAIN ── -->
+<main class="main">
+    <div class="topbar">
+        <div>
+            <h2>Product Management</h2>
+            <p>Manage your products, inventory, and variants</p>
+        </div>
+        <button class="btn-add" id="openAddModal" {% if show_deleted %}style="display:none"{% endif %}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Product
+        </button>
+    </div>
+
+    <div class="content">
+        <!-- Stats -->
+        <div class="stats-row">
+            <div class="stat-card total">
+                <div class="label">Total Products</div>
+                <div class="value">{{ total_products }}</div>
+            </div>
+            <div class="stat-card active">
+                <div class="label">Active</div>
+                <div class="value">{{ active_products }}</div>
+            </div>
+            <div class="stat-card inactive">
+                <div class="label">Inactive</div>
+                <div class="value">{{ inactive_products }}</div>
+            </div>
+        </div>
+
+        <!-- Tabs + Toolbar -->
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+            <!-- View tabs -->
+            <div class="view-tabs">
+                <a href="?per_page={{ per_page }}" class="view-tab {% if not show_deleted %}active{% endif %}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                    Listed
+                    <span class="tab-count">{{ total_products }}</span>
+                </a>
+                <a href="?show=deleted&per_page={{ per_page }}" class="view-tab {% if show_deleted %}active{% endif %}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                    Unlisted
+                    <span class="tab-count">{{ deleted_count }}</span>
+                </a>
+            </div>
+
+            <!-- Right controls -->
+            <div style="display:flex;align-items:center;gap:10px;flex:1;justify-content:flex-end;">
+                <div class="search-wrap" style="max-width:340px;flex:1;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                    <input type="text" class="search-input" placeholder="Search products..." id="searchInput" value="{{ search_query }}">
+                    <button class="search-cancel {% if search_query %}visible{% endif %}" id="searchCancel" title="Clear search">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
+                <div class="per-page-wrap">
+                    <span>Show</span>
+                    <select class="per-page-select" id="perPageSelect">
+                        <option value="5" {% if per_page == 5 %}selected{% endif %}>5</option>
+                        <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+                        <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
+                        <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:35%">Product</th>
+                        <th>Category</th>
+                        <th>Price</th>
+                        <th>{% if show_deleted %}Unlisted On{% else %}Stock{% endif %}</th>
+                        <th>Status</th>
+                        <th style="text-align:right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="productTableBody">
+                {% for product in products %}
+                <tr data-id="{{ product.id }}" data-active="{{ product.is_active|lower }}" {% if show_deleted %}class="deleted-row"{% endif %}>
+                    <td>
+                        <div class="product-cell">
+                            <div class="product-thumb">
+                                {% with product.variants.first as v %}
+                                {% if v and v.images.first %}
+                                    <img src="{{ v.images.first.image.url }}" alt="{{ product.name }}">
+                                {% else %}
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                                {% endif %}
+                                {% endwith %}
+                            </div>
+                            <div>
+                                <div class="product-name">{{ product.name }}</div>
+                                <div class="product-brand">{{ product.brand.name }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="color:var(--text-muted)">{{ product.category.name|default:"—" }}</td>
+                    <td style="font-weight:500">
+                        {% if not show_deleted %}
+                        <span style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:1px">Starting from</span>
+                        ₹{{ product.min_price|floatformat:0 }}
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>
+                        {% if not show_deleted %}
+                        {% with product.total_stock as stock %}
+                        <span class="stock-badge {% if stock == 0 %}zero{% elif stock <= 10 %}low{% else %}ok{% endif %}">
+                            {{ stock }} units
+                        </span>
+                        {% endwith %}
+                        {% else %}
+                        <span style="font-size:12px;color:var(--text-dim)">{{ product.deleted_at|date:"M d, Y" }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if show_deleted %}
+                        <span class="status-badge inactive">Unlisted</span>
+                        {% else %}
+                        <span class="status-badge {% if product.is_active %}active{% else %}inactive{% endif %}" id="status-{{ product.id }}">
+                            {% if product.is_active %}Active{% else %}Inactive{% endif %}
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="actions-cell" style="justify-content:flex-end">
+                            {% if show_deleted %}
+                            <!-- Restore button -->
+                            <button class="action-btn restore-btn" title="Restore product" onclick="restoreProduct({{ product.id }}, this)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4"/></svg>
+                            </button>
+                            {% else %}
+                            <!-- Edit -->
+                            <button class="action-btn" title="Edit product" onclick="openEditModal({{ product.id }})">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            </button>
+                            <!-- Toggle Active/Inactive -->
+                            <button class="action-btn" title="Toggle status" onclick="toggleStatus({{ product.id }}, this)">
+                                {% if product.is_active %}
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+                                {% else %}
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                                {% endif %}
+                            </button>
+                            <!-- Soft Delete -->
+                            <button class="action-btn delete" title="Unlist product" onclick="confirmDelete({{ product.id }}, '{{ product.name|escapejs }}')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6">
+                        <div class="empty-state">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                            <p>No products found. Add your first product.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if products.has_other_pages %}
+        <div class="pagination">
+            <div class="pagination-info">
+                Showing <strong>{{ products.start_index }}–{{ products.end_index }}</strong> of <strong>{{ products.paginator.count }}</strong> products
+            </div>
+            <div class="pagination-controls">
+                {% if products.has_previous %}
+                <a href="?{% if show_deleted %}show=deleted&{% endif %}q={{ search_query }}&page={{ products.previous_page_number }}&per_page={{ per_page }}" class="page-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+                </a>
+                {% else %}
+                <span class="page-btn disabled"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></span>
+                {% endif %}
+
+                {% for num in products.paginator.page_range %}
+                    {% if products.number == num %}
+                        <span class="page-btn active">{{ num }}</span>
+                    {% elif num == 1 or num == products.paginator.num_pages or num >= products.number|add:"-2" and num <= products.number|add:"2" %}
+                        <a href="?{% if show_deleted %}show=deleted&{% endif %}q={{ search_query }}&page={{ num }}&per_page={{ per_page }}" class="page-btn">{{ num }}</a>
+                    {% elif num == products.number|add:"-3" or num == products.number|add:"3" %}
+                        <span class="page-dots">…</span>
+                    {% endif %}
+                {% endfor %}
+
+                {% if products.has_next %}
+                <a href="?{% if show_deleted %}show=deleted&{% endif %}q={{ search_query }}&page={{ products.next_page_number }}&per_page={{ per_page }}" class="page-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                </a>
+                {% else %}
+                <span class="page-btn disabled"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></span>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div class="pagination">
+            <div class="pagination-info">
+                Showing <strong>{{ products.paginator.count }}</strong> product{{ products.paginator.count|pluralize }}
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</main>
+
+<!-- ══════════════════════════════════════════════════════
+     ADD PRODUCT MODAL
+══════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="addModalOverlay">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 id="modalTitle">Add New Product</h3>
+            <button class="modal-close" id="closeAddModal">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+
+        <div class="modal-body">
+            <!-- Basic Information -->
+            <div class="section-title">Basic Information</div>
+            <div class="form-grid full">
+                <div class="form-group">
+                    <label class="form-label">Product Name <span class="required">*</span></label>
+                    <input type="text" class="form-input" id="f-name" placeholder="Enter product name">
+                </div>
+            </div>
+            <div class="form-grid full" style="margin-top:12px">
+                <div class="form-group">
+                    <label class="form-label">Description <span class="required">*</span></label>
+                    <textarea class="form-textarea" id="f-description" placeholder="Enter product description"></textarea>
+                </div>
+            </div>
+            <div class="form-grid" style="margin-top:12px">
+                <div class="form-group">
+                    <label class="form-label">Category <span class="required">*</span></label>
+                    <select class="form-select" id="f-category">
+                        <option value="">Select category</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Brand <span class="required">*</span></label>
+                    <select class="form-select" id="f-brand">
+                        <option value="">Select brand</option>
+                        {% for brand in brands %}
+                        <option value="{{ brand.id }}">{{ brand.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-grid full" style="margin-top:12px">
+                <div class="form-group">
+                    <label class="form-label">Occasion</label>
+                    <select class="form-select" id="f-occasion">
+                        <option value="">Select occasion</option>
+                        <option value="casual">Casual</option>
+                        <option value="formal">Formal</option>
+                        <option value="sports">Sports</option>
+                        <option value="party">Party</option>
+                        <option value="wedding">Wedding</option>
+                        <option value="ethnic">Ethnic</option>
+                        <option value="beach">Beach</option>
+                        <option value="office">Office</option>
+                        <option value="outdoor">Outdoor</option>
+                        <option value="festive">Festive</option>
+                    </select>
+                </div>
+            </div>
+            <div class="toggle-row" style="margin-top:8px">
+                <label class="toggle-item">
+                    <input type="checkbox" id="f-is-active" checked>
+                    <span class="toggle-label">Is Active</span>
+                </label>
+                <label class="toggle-item">
+                    <input type="checkbox" id="f-is-featured">
+                    <span class="toggle-label">Is Featured</span>
+                </label>
+            </div>
+
+            <!-- Product Variants -->
+            <div class="section-title" style="margin-top:20px">
+                <div class="variants-header">
+                    <span>Product Variants <span class="required">*</span></span>
+                    <button class="btn-add-variant" type="button" onclick="addVariant()">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Add Variant
+                    </button>
+                </div>
+            </div>
+
+            <div id="variantsContainer"></div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn btn-ghost" id="cancelAddBtn">Cancel</button>
+            <button class="btn btn-primary" id="submitProductBtn">Add Product</button>
+        </div>
+    </div>
+</div>
+
+<!-- CONFIRM DELETE MODAL -->
+<div class="modal-overlay" id="confirmOverlay">
+    <div class="confirm-modal">
+        <div class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        </div>
+        <h4>Soft Delete Product</h4>
+        <p>Are you sure you want to deactivate <strong id="deleteProductName"></strong>?</p>
+        <div class="confirm-note">
+            ⚠️ This is a soft delete — the product will be hidden but not permanently removed. You can restore it from Deleted Products.
+        </div>
+        <div class="btn-row">
+            <button class="btn btn-ghost" onclick="closeConfirm()">Cancel</button>
+            <button class="btn btn-primary" id="confirmDeleteBtn">Deactivate</button>
+        </div>
+    </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+    <svg class="t-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+    <span id="toastMsg">Done</span>
+</div>
+
+<script>
+const CSRF = '{{ csrf_token }}';
+let variantCount = 0;
+let editingProductId = null;
+
+// ── MODAL ──
+const addOverlay = document.getElementById('addModalOverlay');
+const confirmOverlay = document.getElementById('confirmOverlay');
+
+document.getElementById('openAddModal').addEventListener('click', () => {
+    editingProductId = null;
+    document.getElementById('modalTitle').textContent = 'Add New Product';
+    document.getElementById('submitProductBtn').textContent = 'Add Product';
+    resetForm();
+    addVariant();
+    addOverlay.classList.add('open');
+});
+
+document.getElementById('closeAddModal').addEventListener('click', () => addOverlay.classList.remove('open'));
+document.getElementById('cancelAddBtn').addEventListener('click', () => addOverlay.classList.remove('open'));
+
+addOverlay.addEventListener('click', (e) => { if (e.target === addOverlay) addOverlay.classList.remove('open'); });
+
+function resetForm() {
+    document.getElementById('f-name').value = '';
+    document.getElementById('f-description').value = '';
+    document.getElementById('f-category').value = '';
+    document.getElementById('f-brand').value = '';
+    document.getElementById('f-occasion').value = '';
+    document.getElementById('f-is-active').checked = true;
+    document.getElementById('f-is-featured').checked = false;
+    document.getElementById('variantsContainer').innerHTML = '';
+    variantCount = 0;
+    Object.keys(variantImageCounts).forEach(k => delete variantImageCounts[k]);
+}
+
+// ── VARIANTS ──
+function addVariant() {
+    variantCount++;
+    const n = variantCount;
+    const container = document.getElementById('variantsContainer');
+    const div = document.createElement('div');
+    div.className = 'variant-card';
+    div.id = `variant-${n}`;
+    div.innerHTML = `
+        <div class="variant-card-header">
+            <span class="variant-card-title">Variant #${n}</span>
+            <button class="btn-remove-variant" type="button" onclick="removeVariant(${n})">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                Remove
+            </button>
+        </div>
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label">Color <span class="required">*</span></label>
+                <select class="form-select v-color">
+    <option value="">Select Color</option>
+    <option value="black">Black</option>
+    <option value="white">White</option>
+    <option value="nude">Nude</option>
+    <option value="beige">Beige</option>
+    <option value="brown">Brown</option>
+    <option value="tan">Tan</option>
+    <option value="gold">Gold</option>
+    <option value="silver">Silver</option>
+    <option value="rose_gold">Rose Gold</option>
+    <option value="maroon">Maroon</option>
+    <option value="navy">Navy</option>
+    <option value="olive">Olive</option>
+    <option value="peach">Peach</option>
+</select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Size <span class="required">*</span></label>
+                <select class="form-select v-size">
+    <option value="">Select Size</option>
+    <option value="3">3</option>
+    <option value="4">4</option>
+    <option value="5">5</option>
+    <option value="6">6</option>
+    <option value="7">7</option>
+    <option value="8">8</option>
+    <option value="9">9</option>
+</select>
+
+            </div>
+            <div class="form-group">
+                <label class="form-label">Price <span class="required">*</span></label>
+                <input type="number" class="form-input v-price" placeholder="0.00" step="0.01">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Sales Price</label>
+                <input type="number" class="form-input v-sales-price" placeholder="Optional" step="0.01">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Stock <span class="required">*</span></label>
+                <input type="number" class="form-input v-stock" placeholder="0" min="0">
+            </div>
+        </div>
+        <div class="form-group" style="margin-top:12px">
+            <label class="form-label">Variant Images <span class="required">*</span> <span style="font-size:11px;color:var(--orange);font-weight:400">(min. 3 required)</span></label>
+            <div class="image-upload-area" onclick="document.getElementById('imgInput-${n}').click()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <p>Click to upload images</p>
+                <span>SVG, PNG, JPG or GIF (max. 800×400px)</span>
+            </div>
+            <input type="file" id="imgInput-${n}" style="display:none" multiple accept="image/*" onchange="previewImages(${n}, this)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
+                <span id="imgCount-${n}" style="font-size:11px;color:var(--text-dim)">0 images selected</span>
+                <span id="imgCountErr-${n}" style="font-size:11px;color:var(--red);display:none">⚠ At least 3 images required</span>
+            </div>
+            <div class="upload-preview" id="preview-${n}"></div>
+        </div>
+    `;
+    container.appendChild(div);
+}
+
+function removeVariant(n) {
+    const el = document.getElementById(`variant-${n}`);
+    if (el) el.remove();
+    delete variantImageCounts[n];
+}
+
+// Track image counts per variant
+const variantImageCounts = {};
+
+function previewImages(n, input) {
+    const preview = document.getElementById(`preview-${n}`);
+    const countEl = document.getElementById(`imgCount-${n}`);
+    const errEl = document.getElementById(`imgCountErr-${n}`);
+
+    Array.from(input.files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = e => {
+            const item = document.createElement('div');
+            item.className = 'upload-preview-item';
+            item.dataset.variantId = n;
+            item.innerHTML = `
+                <img src="${e.target.result}" alt="">
+                <div class="remove-img" onclick="removePreviewImage(${n}, this.parentElement)">×</div>
+            `;
+            preview.appendChild(item);
+            variantImageCounts[n] = (variantImageCounts[n] || 0) + 1;
+            updateImageCount(n);
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function removePreviewImage(n, item) {
+    item.remove();
+    variantImageCounts[n] = Math.max(0, (variantImageCounts[n] || 1) - 1);
+    updateImageCount(n);
+}
+
+function updateImageCount(n) {
+    const count = variantImageCounts[n] || 0;
+    const countEl = document.getElementById(`imgCount-${n}`);
+    const errEl = document.getElementById(`imgCountErr-${n}`);
+    if (countEl) countEl.textContent = `${count} image${count !== 1 ? 's' : ''} selected`;
+    if (errEl) errEl.style.display = count > 0 && count < 3 ? 'inline' : 'none';
+}
+
+// ── SUBMIT PRODUCT ──
+document.getElementById('submitProductBtn').addEventListener('click', async () => {
+    const name = document.getElementById('f-name').value.trim();
+    const description = document.getElementById('f-description').value.trim();
+    const category = document.getElementById('f-category').value;
+    const brand = document.getElementById('f-brand').value;
+
+    if (!name || !category) {
+        showToast('Please fill in all required fields.', 'error');
+        return;
+    }
+
+    const variantCards = document.querySelectorAll('#variantsContainer .variant-card');
+    const variants = [];
+    let imageError = false;
+
+    for (const card of variantCards) {
+        const cardId = card.id.replace('variant-', '');
+        const imgCount = variantImageCounts[cardId] || 0;
+        if (imgCount < 3) {
+            imageError = true;
+            const errEl = document.getElementById(`imgCountErr-${cardId}`);
+            if (errEl) errEl.style.display = 'inline';
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        variants.push({
+            color: card.querySelector('.v-color').value.trim(),
+            size: card.querySelector('.v-size').value.trim(),
+            price: parseFloat(card.querySelector('.v-price').value) || 0,
+            sales_price: parseFloat(card.querySelector('.v-sales-price').value) || null,
+            stock: parseInt(card.querySelector('.v-stock').value) || 0,
+        });
+    }
+
+    if (imageError) {
+        showToast('Each variant requires at least 3 images.', 'error');
+        return;
+    }
+
+    const payload = {
+        name,
+        description,
+        category,
+        brand,
+        occasion: document.getElementById('f-occasion').value.trim(),
+        is_active: document.getElementById('f-is-active').checked,
+        is_featured: document.getElementById('f-is-featured').checked,
+        variants,
+    };
+
+    const btn = document.getElementById('submitProductBtn');
+    btn.disabled = true;
+    btn.textContent = editingProductId ? 'Saving...' : 'Adding...';
+
+    try {
+        const url = editingProductId
+            ? `/products/${editingProductId}/edit/`
+            : '/products/add/';
+
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+            body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            showToast(data.message, 'success');
+            addOverlay.classList.remove('open');
+            setTimeout(() => location.reload(), 800);
+        } else {
+            const errs = Object.values(data.errors || {}).flat().join(', ');
+            showToast(errs || 'Something went wrong.', 'error');
+        }
+    } catch (e) {
+        showToast('Network error. Please try again.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = editingProductId ? 'Save Changes' : 'Add Product';
+    }
+});
+
+// ── EDIT ──
+async function openEditModal(id) {
+    try {
+        const res = await fetch(`/products/${id}/edit/`);
+        const data = await res.json();
+
+        editingProductId = id;
+        document.getElementById('modalTitle').textContent = 'Edit Product';
+        document.getElementById('submitProductBtn').textContent = 'Save Changes';
+
+        document.getElementById('f-name').value = data.name || '';
+        document.getElementById('f-description').value = data.description || '';
+        document.getElementById('f-category').value = data.category || '';
+        document.getElementById('f-brand').value = data.brand || '';
+        document.getElementById('f-occasion').value = data.occasion || '';
+        document.getElementById('f-is-active').checked = data.is_active;
+        document.getElementById('f-is-featured').checked = data.is_featured;
+
+        document.getElementById('variantsContainer').innerHTML = '';
+        variantCount = 0;
+
+        (data.variants || []).forEach(v => {
+            addVariant();
+            const card = document.querySelector(`#variant-${variantCount}`);
+            card.querySelector('.v-color').value = v.color || '';
+            card.querySelector('.v-size').value = v.size || '';
+            card.querySelector('.v-price').value = v.price || '';
+            card.querySelector('.v-sales-price').value = v.sales_price || '';
+            card.querySelector('.v-stock').value = v.stock || 0;
+        });
+
+        if ((data.variants || []).length === 0) addVariant();
+
+        addOverlay.classList.add('open');
+    } catch (e) {
+        showToast('Failed to load product.', 'error');
+    }
+}
+
+// ── TOGGLE STATUS ──
+async function toggleStatus(id, btn) {
+    try {
+        const res = await fetch(`/products/${id}/toggle-status/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF },
+        });
+        const data = await res.json();
+        if (data.success) {
+            const statusEl = document.getElementById(`status-${id}`);
+            if (data.is_active) {
+                statusEl.textContent = 'Active';
+                statusEl.className = 'status-badge active';
+            } else {
+                statusEl.textContent = 'Inactive';
+                statusEl.className = 'status-badge inactive';
+            }
+            showToast(data.message, 'success');
+        }
+    } catch (e) {
+        showToast('Failed to toggle status.', 'error');
+    }
+}
+
+// ── SOFT DELETE ──
+let deleteTargetId = null;
+
+function confirmDelete(id, name) {
+    deleteTargetId = id;
+    document.getElementById('deleteProductName').textContent = name;
+    confirmOverlay.classList.add('open');
+}
+
+function closeConfirm() {
+    confirmOverlay.classList.remove('open');
+    deleteTargetId = null;
+}
+
+document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
+    if (!deleteTargetId) return;
+    try {
+        const res = await fetch(`/products/${deleteTargetId}/soft-delete/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF },
+        });
+        const data = await res.json();
+        if (data.success) {
+            const row = document.querySelector(`tr[data-id="${deleteTargetId}"]`);
+            if (row) row.style.opacity = '0';
+            setTimeout(() => { if (row) row.remove(); }, 300);
+            showToast(data.message, 'success');
+        }
+    } catch (e) {
+        showToast('Failed to delete product.', 'error');
+    } finally {
+        closeConfirm();
+    }
+});
+
+confirmOverlay.addEventListener('click', (e) => { if (e.target === confirmOverlay) closeConfirm(); });
+
+// ── SEARCH ──
+const searchInput = document.getElementById('searchInput');
+const searchCancel = document.getElementById('searchCancel');
+let searchTimer;
+
+function buildUrl(params = {}) {
+    const url = new URL(window.location.href);
+    Object.entries(params).forEach(([k, v]) => {
+        if (v !== null && v !== undefined && v !== '') url.searchParams.set(k, v);
+        else url.searchParams.delete(k);
+    });
+    return url.toString();
+}
+
+searchInput.addEventListener('input', (e) => {
+    const q = e.target.value.trim();
+    searchCancel.classList.toggle('visible', q.length > 0);
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+        window.location.href = buildUrl({ q: q || null, page: null });
+    }, 400);
+});
+
+searchCancel.addEventListener('click', () => {
+    searchInput.value = '';
+    searchCancel.classList.remove('visible');
+    searchInput.focus();
+    window.location.href = buildUrl({ q: null, page: null });
+});
+
+// ── PER PAGE ──
+document.getElementById('perPageSelect').addEventListener('change', (e) => {
+    window.location.href = buildUrl({ per_page: e.target.value, page: null });
+});
+
+// ── RESTORE ──
+async function restoreProduct(id, btn) {
+    btn.disabled = true;
+    try {
+        const res = await fetch(`/products/${id}/restore/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF },
+        });
+        const data = await res.json();
+        if (data.success) {
+            const row = document.querySelector(`tr[data-id="${id}"]`);
+            if (row) { row.style.transition = 'opacity 0.3s'; row.style.opacity = '0'; setTimeout(() => row.remove(), 300); }
+            showToast(data.message, 'success');
+        }
+    } catch (e) {
+        showToast('Failed to restore product.', 'error');
+        btn.disabled = false;
+    }
+}
+
+// ── TOAST ──
+function showToast(msg, type = 'success') {
+    const toast = document.getElementById('toast');
+    const icon = toast.querySelector('.t-icon');
+    document.getElementById('toastMsg').textContent = msg;
+    toast.className = `toast ${type}`;
+
+    if (type === 'success') {
+        icon.innerHTML = '<polyline points="20 6 9 17 4 12"/>';
+    } else {
+        icon.innerHTML = '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>';
+    }
+
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3200);
+}
+</script>
+</body>
+</html>

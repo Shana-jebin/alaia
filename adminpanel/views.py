@@ -10,10 +10,15 @@ from django.views.decorators.csrf import csrf_protect
 from django.http import JsonResponse
 from django.utils import timezone
 from datetime import timedelta
-from django.http import JsonResponse
-from products.models import Category
-
-
+from .models import Category
+from django.utils.text import slugify
+import json
+from django.views.decorators.http import require_POST, require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+from .models import Product, ProductVariant, VariantImage, Brand
+from .forms import ProductForm, ProductVariantForm
+from django.shortcuts import render, get_object_or_404, redirect
+from django.core.paginator import Paginator
 
 
 User = get_user_model()
@@ -148,13 +153,82 @@ def search_users(request):
 
     return JsonResponse({"users": data})
 
+def generate_unique_slug(name, instance=None):
+    slug = slugify(name)
+    unique_slug = slug
+    counter = 1
+
+    while True:
+        slug_exists = Category.objects.filter(slug=unique_slug)
+
+        if instance:
+            slug_exists = slug_exists.exclude(id=instance.id)
+
+        if not slug_exists.exists():
+            break
+
+        unique_slug = f"{slug}-{counter}"
+        counter += 1
+
+    return unique_slug
+
 
 @login_required
 @user_passes_test(is_admin)
 def admin_category_list(request):
-
     query = request.GET.get('q', '')
 
+    if request.method == "POST":
+        name = request.POST.get('name', '').strip().title()
+
+
+        if not name:
+            messages.error(request, "Category name cannot be empty.")
+            return redirect('admin_category_list')
+
+
+        description = request.POST.get('description')
+        offer_percentage = request.POST.get('offer_percentage')
+        is_active = request.POST.get('is_active') == "True"
+
+     
+        existing_category = Category.objects.filter(
+            name__iexact=name,
+            is_deleted=True
+        ).first()
+
+        if existing_category:
+            existing_category.is_deleted = False
+            existing_category.description = description
+            existing_category.offer_percentage = offer_percentage or None
+            existing_category.is_active = is_active
+            existing_category.slug = generate_unique_slug(name, instance=existing_category)
+            existing_category.save()
+
+            messages.success(request, "Deleted category restored successfully!")
+            return redirect('admin_category_list')
+        
+
+       
+        if Category.objects.filter(name__iexact=name, is_deleted=False).exists():
+            messages.error(request, "Category already exists!")
+            return redirect('admin_category_list')
+
+
+        slug = generate_unique_slug(name)
+
+        Category.objects.create(
+            name=name,
+            slug=slug,
+            description=description,
+            offer_percentage=offer_percentage if offer_percentage else None,
+            is_active=is_active
+        )
+
+        messages.success(request, "Category added successfully!")
+        return redirect('admin_category_list')
+
+ 
     categories = Category.objects.filter(is_deleted=False)
 
     if query:
@@ -163,25 +237,363 @@ def admin_category_list(request):
     categories = categories.order_by('-created_at')
 
     paginator = Paginator(categories, 5)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    page_number = request.GET.get('page', 1)
+
+    try:
+        page_obj = paginator.page(page_number)
+    except:
+        page_obj = paginator.page(paginator.num_pages)
+
 
     context = {
-        'page_obj': page_obj,
-        'query': query,
-    }
+    'page_obj': page_obj,
+    'query': query,
+    'request': request
+}
 
     return render(request, 'adminpanel/category-management.html', context)
 
 
 
+@login_required
+@user_passes_test(is_admin)
+def admin_category_edit(request, category_id):
+    category = get_object_or_404(Category, id=category_id)
+
+    if request.method == "POST":
+        name = request.POST.get('name', '').strip().title()
+
+        # ❗ EMPTY NAME BLOCK
+        if not name:
+            messages.error(request, "Category name cannot be empty.")
+            return redirect('admin_category_list')
+
+
+
+        category.name = name
+        category.slug = generate_unique_slug(name, instance=category)
+        category.description = request.POST.get('description')
+        category.offer_percentage = request.POST.get('offer_percentage') or None
+        category.is_active = request.POST.get('is_active') == "True"
+
+        category.save()
+
+        messages.success(request, "Category updated successfully!")
+        return redirect('admin_category_list')
+
+    return redirect('admin_category_list')
+
+
+
+@login_required
+@user_passes_test(is_admin)
+def admin_category_delete(request, category_id):
+    category = get_object_or_404(Category, id=category_id)
+
+    if request.method == "POST":
+        category.is_deleted = True  
+        category.save()
+
+        messages.success(request, "Category deleted successfully!")
+
+    return redirect('admin_category_list')
 
 
 
 
-@never_cache
-def admin_logout(request):
-    logout(request)
-    return redirect('admin_login')
 
 
+
+def product_list(request):
+    
+    search_query = request.GET.get('q', '')
+    per_page = int(request.GET.get('per_page', 10))
+    page_number = request.GET.get('page', 1)
+    show_deleted = request.GET.get('show') == 'deleted'
+
+    if per_page not in [5, 10, 25, 50]:
+        per_page = 10
+
+    if show_deleted:
+        products = Product.objects.filter(is_deleted=True).select_related('category', 'brand')
+    else:
+        products = Product.objects.filter(is_deleted=False).select_related('category', 'brand')
+
+    if search_query:
+        products = products.filter(
+            Q(name__icontains=search_query) |
+            Q(category__name__icontains=search_query) |
+            Q(brand__name__icontains=search_query)
+        )
+
+    products = products.order_by('-created_at' if not show_deleted else '-deleted_at')
+
+
+    all_active = Product.objects.filter(is_deleted=False)
+    total_products = all_active.count()
+    active_products = all_active.filter(is_active=True).count()
+    inactive_products = all_active.filter(is_active=False).count()
+    deleted_count = Product.objects.filter(is_deleted=True).count()
+
+    paginator = Paginator(products, per_page)
+    products_page = paginator.get_page(page_number)
+
+    categories = Category.objects.all()
+    brands = Brand.objects.all()
+
+    context = {
+        'products': products_page,
+        'search_query': search_query,
+        'per_page': per_page,
+        'show_deleted': show_deleted,
+        'categories': categories,
+        'brands': brands,
+        'total_products': total_products,
+        'active_products': active_products,
+        'inactive_products': inactive_products,
+        'deleted_count': deleted_count,
+    }
+    return render(request, 'adminpanel/product_list.html', context)
+
+
+def product_add(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+        except (json.JSONDecodeError, Exception):
+            data = request.POST
+
+        product_form = ProductForm(data)
+
+        if product_form.is_valid():
+            product = product_form.save()
+
+            variants_data = data.get('variants', [])
+
+            for variant_data in variants_data:
+
+                if variant_data.get('image_count', 0) < 3:
+                    return JsonResponse({
+                    'success': False,
+                    'message': 'Each variant must have at least 3 images.'
+                }, status=400)
+
+            variant = ProductVariant.objects.create(
+            product=product,
+            color=variant_data.get('color', ''),
+            size=variant_data.get('size', ''),
+            price=variant_data.get('price', 0),
+            sales_price=variant_data.get('sales_price') or None,
+            stock=variant_data.get('stock', 0),
+        )
+
+            return JsonResponse({'success': True, 'product_id': product.id, 'message': 'Product added successfully!'})
+        else:
+            return JsonResponse({'success': False, 'errors': product_form.errors}, status=400)
+
+    return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+
+
+def product_edit(request, pk):
+    product = get_object_or_404(Product, pk=pk, is_deleted=False)
+
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            data = request.POST
+
+        product_form = ProductForm(data, instance=product)
+        if product_form.is_valid():
+            product = product_form.save()
+            return JsonResponse({'success': True, 'message': 'Product updated successfully!'})
+        else:
+            return JsonResponse({'success': False, 'errors': product_form.errors}, status=400)
+
+    variants = []
+    for v in product.variants.filter(is_deleted=False):
+        variants.append({
+            'id': v.id,
+            'color': v.color,
+            'size': v.size,
+            'price': str(v.price),
+            'sales_price': str(v.sales_price) if v.sales_price else '',
+            'stock': v.stock,
+        })
+
+    return JsonResponse({
+        'id': product.id,
+        'name': product.name,
+        'description': product.description,
+        'category': product.category_id,
+        'brand': product.brand_id,
+        'occasion': product.occasion,
+        'is_active': product.is_active,
+        'is_featured': product.is_featured,
+        'variants': variants,
+    })
+
+
+@require_POST
+def product_soft_delete(request, pk):
+    product = get_object_or_404(Product, pk=pk, is_deleted=False)
+    product.soft_delete()
+    return JsonResponse({'success': True, 'message': f'"{product.name}" has been deactivated (soft deleted).'})
+
+
+@require_POST
+def product_restore(request, pk):
+    product = get_object_or_404(Product, pk=pk, is_deleted=True)
+    product.restore()
+    return JsonResponse({'success': True, 'message': f'"{product.name}" has been restored.'})
+
+
+@require_POST
+def product_toggle_status(request, pk):
+    product = get_object_or_404(Product, pk=pk, is_deleted=False)
+    product.is_active = not product.is_active
+    product.save()
+    status = 'Active' if product.is_active else 'Inactive'
+    return JsonResponse({'success': True, 'is_active': product.is_active, 'message': f'Product is now {status}.'})
+
+
+def product_upload_image(request):
+    if request.method == 'POST' and request.FILES.get('image'):
+        image = request.FILES['image']
+        variant_id = request.POST.get('variant_id')
+        
+        if variant_id:
+            variant = get_object_or_404(ProductVariant, pk=variant_id)
+            variant_image = VariantImage.objects.create(variant=variant, image=image)
+            return JsonResponse({'success': True, 'image_id': variant_image.id, 'image_url': variant_image.image.url})
+        
+        return JsonResponse({'success': False, 'message': 'variant_id is required'}, status=400)
+    
+    return JsonResponse({'success': False, 'message': 'No image provided'}, status=400)
+
+
+
+
+
+
+def brand_list(request):
+
+    query = request.GET.get('q','').strip()
+
+    active_brands = Brand.objects.filter(is_active=True).order_by('name')
+    inactive_brands = Brand.objects.filter(is_active=False).order_by('name')
+
+
+    if query:
+        active_brands = active_brands.filter(name__icontains=query)
+        inactive_brands = inactive_brands.filter(name__icontains=query)
+
+
+    paginator = Paginator(active_brands, 5)  
+    page_number = request.GET.get('page')
+    brands = paginator.get_page(page_number)
+
+    return render(request,'adminpanel/brand-management.html',{
+        'brands': brands,
+        'inactive_brands': inactive_brands,
+        'query': query,
+    })
+
+
+
+def brand_create(request):
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        rating = request.POST.get('rating')
+        logo = request.FILES.get('logo')
+
+        if not name:
+            messages.error(request, "Brand name is required")
+            return redirect('brand_create')
+
+        if Brand.objects.filter(name__iexact=name).exists():
+            messages.error(request, "Brand already exists")
+            return redirect('brand_create')
+
+        if rating:
+            try:
+                rating = float(rating)
+                if rating < 0 or rating > 5:
+                    messages.error(request, "Rating must be between 0 and 5")
+                    return redirect('brand_create')
+            except:
+                messages.error(request, "Invalid rating value")
+                return redirect('brand_create')
+        else:
+            rating = 0.0
+
+        Brand.objects.create(
+            name=name,
+            rating=rating,
+            logo=logo
+        )
+
+        messages.success(request, "Brand added successfully")
+        return redirect('brand_list')
+
+
+    return render(request, 'adminpanel/brand-management.html')
+
+
+
+def brand_edit(request, pk):
+    brand = get_object_or_404(Brand, pk=pk)
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        rating = request.POST.get('rating')
+        logo = request.FILES.get('logo')
+
+   
+        if not name:
+            messages.error(request, "Brand name is required")
+            return redirect('brand_edit', pk=pk)
+
+        if Brand.objects.filter(name__iexact=name).exclude(pk=pk).exists():
+            messages.error(request, "Brand already exists")
+            return redirect('brand_edit', pk=pk)
+
+        if rating:
+            try:
+                rating = float(rating)
+                if rating < 0 or rating > 5:
+                    messages.error(request, "Rating must be between 0 and 5")
+                    return redirect('brand_edit', pk=pk)
+            except:
+                messages.error(request, "Invalid rating value")
+                return redirect('brand_edit', pk=pk)
+        else:
+            rating = 0.0
+
+        brand.name = name
+        brand.rating = rating
+
+        if logo:
+            brand.logo = logo
+
+        brand.save()
+
+        messages.success(request, "Brand updated successfully")
+        return redirect('brand_list')
+
+    return render(request, 'adminpanel/brand-edit.html', {
+        'brand': brand
+    })
+
+
+def brand_delete(request, pk):
+    brand = get_object_or_404(Brand, pk=pk)
+    brand.is_active = False
+    brand.save()
+    return redirect('brand_list')
+
+
+def brand_restore(request, pk):
+    brand = get_object_or_404(Brand, pk=pk)
+    brand.is_active = True
+    brand.save()
+    return redirect('brand_list')

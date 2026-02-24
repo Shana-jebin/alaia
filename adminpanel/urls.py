@@ -6,13 +6,23 @@ urlpatterns = [
     path('dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('users/', views.user_management, name='user_management'),
     path('users/toggle-block/<int:user_id>/', views.toggle_block_user, name='toggle_block_user'),
-    path('admin/search-users/', views.search_users, name='search_users'),
-    path('logout/', views.admin_logout, name='admin_logout'),
+    path('search-users/', views.search_users, name='search_users'),
     path('categories/', views.admin_category_list, name='admin_category_list'),
-    # path('categories/add/', views.add_category, name='add_category'),
-    # path('categories/edit/<int:pk>/', views.edit_category, name='edit_category'),
-    # path('categories/delete/<int:pk>/', views.delete_category, name='delete_category'),
+    path('category/edit/<int:category_id>/', views.admin_category_edit, name='admin_category_edit'),
+    path('category/delete/<int:category_id>/',views.admin_category_delete,name='admin_category_delete'),
 
+    path('product/', views.product_list, name='list'),
+    path('product/add/', views.product_add, name='add'),
+    path('product/<int:pk>/edit/', views.product_edit, name='edit'),
+    path('product/<int:pk>/soft-delete/', views.product_soft_delete, name='soft_delete'),
+    path('product/<int:pk>/toggle-status/', views.product_toggle_status, name='toggle_status'),
+    path('product/upload-image/', views.product_upload_image, name='upload_image'),
+
+    path('brands/', views.brand_list, name='brand_list'),
+    path('brands/create/', views.brand_create, name='brand_create'),
+    path('brands/<int:pk>/edit/', views.brand_edit, name='brand_edit'),
+    path('brands/<int:pk>/delete/', views.brand_delete, name='brand_delete'),
+    path('brands/restore/<int:pk>/', views.brand_restore, name='brand_restore'),
 
 
 ]

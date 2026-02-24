@@ -15,13 +15,3 @@ def shop_view(request):
     return render(request, 'products/shop.html', context)
 
 
-
-
-def admin_category_list(request):
-    categories = Category.objects.filter(is_deleted=False).order_by('-created_at')
-
-    context = {
-        'categories': categories
-    }
-    return render(request, 'admin/category_list.html', context)
-

@@ -2,6 +2,11 @@
     display: flex;
     min-height: 100vh;
 }
+.main-content {
+    margin-left: 220px;   
+    padding: 30px;
+    width: calc(100% - 220px);
+}
 
 /* Sidebar Styles */
 .sidebar {
@@ -15,6 +20,9 @@
     left: 0;
     top: 0;
     height: 100vh;
+}
+.alert {
+    transition: all 0.5s ease;
 }
 
 .logo {

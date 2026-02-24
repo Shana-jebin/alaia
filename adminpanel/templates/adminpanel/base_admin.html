@@ -46,7 +46,7 @@
             <span>Categories</span>
           </a>
 
-          <a href="#" class="nav-item">
+          <a href="{% url 'brand_list' %}" class="nav-item {% if request.resolver_match.url_name == 'brand_list' %}active{% endif %}">
             <span class="icon">🏢</span>
             <span>Brands</span>
           </a>
@@ -86,22 +86,38 @@
 
       <!-- Main Content -->
       <main class="main-content">
-        <div class="header">
-          <h1 class="header-title">
-            {% block page_title %}
-              Dashboard
-            {% endblock %}
-          </h1>
-        </div>
 
-        {% block content %}
+    {% if messages %}
+    <div class="django-messages">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
 
-        {% endblock %}
-      </main>
+    {% block content %}
+    {% endblock %}
+
+</main>
+
     </div>
 
     {% block extra_js %}
 
-    {% endblock %}
+<script>
+    setTimeout(function () {
+        let alerts = document.querySelectorAll('.alert');
+        alerts.forEach(function(alert) {
+            alert.style.opacity = "0";
+            alert.style.transform = "translateY(-10px)";
+            setTimeout(() => alert.remove(), 500);
+        });
+    }, 3000);
+</script>
+
+{% endblock %}
+
   </body>
 </html>
