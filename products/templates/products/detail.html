@@ -1,0 +1,719 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load shop_filters %}
+
+{% block title %}{{ product.name }} — ALAIA Collection{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'products/detail.css' %}">
+{% endblock %}
+
+
+{% block content %}
+
+{# ── Redirect handled in view; show error state if product blocked ── #}
+{% if product.is_blocked or not product.is_active %}
+<div class="pd-error-wrap">
+  <div class="pd-error-code">410</div>
+  <div class="pd-error-title">This piece is no longer available</div>
+  <p class="pd-error-text">It may have been removed or taken offline.</p>
+  <a href="{% url 'products:product_list' %}" class="pd-error-link">← Return to Collection</a>
+</div>
+{% else %}
+
+<!-- ── Breadcrumbs ──────────────────────────────────────────────── -->
+<div class="pd-breadcrumb">
+  <a href="{% url 'home' %}">Home</a> /
+  <a href="{% url 'products:product_list' %}">Collection</a> /
+  {% if product.category %}
+  <a href="{% url 'products:product_list' %}?category={{ product.category.id }}">{{ product.category.name }}</a> /
+  {% endif %}
+  <span>{{ product.name }}</span>
+</div>
+
+
+<!-- ── Main Product Section ────────────────────────────────────── -->
+<div class="pd-main">
+
+  <!-- LEFT: Gallery -->
+  <div class="pd-gallery">
+
+    {% if stock_status == 'out_of_stock' %}
+    <!-- Sold-out overlay on image -->
+    {% endif %}
+
+    <div class="pd-zoom-stage" id="zoomStage">
+      {% if default_variant and default_variant.images.first %}
+        <img class="main-img" id="mainImg"
+             src="{{ default_variant.images.first.image.url }}"
+             alt="{{ product.name }}">
+      {% else %}
+        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+          <svg width="48" height="48" fill="none" stroke="var(--border)" stroke-width="1" viewBox="0 0 24 24">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+        </div>
+      {% endif %}
+
+      {% if product.is_featured %}
+        <span class="pd-gallery-badge badge-featured-lg">Featured</span>
+      {% elif default_variant.sales_price %}
+        <span class="pd-gallery-badge badge-sale-lg">Sale</span>
+      {% endif %}
+
+      {% if stock_status == 'out_of_stock' %}
+      <div class="pd-sold-overlay" id="soldOverlay">
+        <div class="sold-text">Sold Out</div>
+        <div class="sold-sub">This piece is currently unavailable</div>
+        <a href="{% url 'products:product_list' %}" class="back-link">Browse Collection →</a>
+      </div>
+      {% endif %}
+
+      <div class="pd-zoom-lens" id="zoomLens"></div>
+    </div>
+
+    <!-- Thumbnails -->
+    <div class="pd-thumbs" id="thumbsRow">
+      {% for variant in variants %}
+        {% for img in variant.images.all %}
+        <div class="pd-thumb {% if forloop.parentloop.first and forloop.first %}active{% endif %}"
+             data-src="{{ img.image.url }}"
+             data-variant="{{ variant.id }}">
+          <img src="{{ img.image.url }}" alt="{{ product.name }}">
+        </div>
+        {% endfor %}
+      {% endfor %}
+    </div>
+
+  </div>
+  <!-- /gallery -->
+
+
+  <!-- RIGHT: Info Panel -->
+  <div class="pd-info">
+
+    <div class="pd-brand">{{ product.brand.name }}</div>
+    <h1 class="pd-name">{{ product.name|split_last_word }}</h1>
+
+    <!-- Rating row -->
+    <div class="pd-rating-row">
+      <div class="pd-stars">
+        {% for i in "12345" %}
+          <svg class="star {% if forloop.counter > avg_rating %}empty{% endif %}"
+               viewBox="0 0 24 24" fill="{% if forloop.counter <= avg_rating %}currentColor{% else %}none{% endif %}"
+               stroke="currentColor" stroke-width="1.5">
+            <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
+          </svg>
+        {% endfor %}
+      </div>
+      <span class="pd-rating-num">{{ avg_rating }}</span>
+      <span class="pd-review-count">
+        <a href="#pd-reviews">({{ review_count }} review{{ review_count|pluralize }})</a>
+      </span>
+    </div>
+
+    <!-- Price -->
+    <div class="pd-price-row">
+      {% if default_variant %}
+        {% if default_variant.sales_price %}
+          <span class="pd-price sale-price" id="pdPrice">₹{{ default_variant.sales_price|floatformat:0 }}</span>
+          <span class="pd-price-orig" id="pdPriceOrig">₹{{ default_variant.price|floatformat:0 }}</span>
+         {{ default_variant.discount_percentage }}%
+          <span class="pd-discount-badge" id="pdDisc">{{ disc|floatformat:0 }}% OFF</span>
+         
+        {% else %}
+          <span class="pd-price" id="pdPrice">₹{{ default_variant.price|floatformat:0 }}</span>
+          <span class="pd-price-orig" id="pdPriceOrig" style="display:none"></span>
+          <span class="pd-discount-badge" id="pdDisc" style="display:none"></span>
+        {% endif %}
+      {% endif %}
+    </div>
+    <div class="pd-tax-note">Inclusive of all taxes · Free shipping over ₹2,999</div>
+
+    <!-- Coupons -->
+    {% if coupons %}
+    <div class="pd-coupons">
+      <div class="pd-coupons-title">Available Offers</div>
+      <div class="coupon-list">
+        {% for coupon in coupons %}
+        <div class="coupon-pill" onclick="copyCoupon('{{ coupon.code }}')" title="Click to copy">
+          <svg class="coupon-copy-icon" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <rect x="9" y="9" width="13" height="13" rx="1"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+          <span class="coupon-code">{{ coupon.code }}</span>
+          <span>·</span>
+          <span>
+            {% if coupon.discount_type == 'percent' %}
+              {{ coupon.discount_value|floatformat:0 }}% off
+            {% else %}
+              ₹{{ coupon.discount_value|floatformat:0 }} off
+            {% endif %}
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="pd-divider"></div>
+
+    <!-- Stock status -->
+    <div class="pd-stock {% if stock_status == 'in_stock' %}stock-in{% elif stock_status == 'low_stock' %}stock-low{% else %}stock-out{% endif %}" id="stockBadge">
+      <span class="sdot"></span>
+      {% if stock_status == 'in_stock' %}In Stock
+      {% elif stock_status == 'low_stock' %}Only {{ total_stock }} left — order soon
+      {% else %}Out of Stock{% endif %}
+    </div>
+
+    <!-- Colour selector -->
+    {% if product.unique_colors %}
+    <div class="pd-option-label">Colour <span id="selectedColourLabel">{{ product.unique_colors.0 }}</span></div>
+    <div class="pd-colors" id="colorSelector">
+      {% for color in product.unique_colors %}
+      <label class="pd-color-swatch-wrap">
+        <input type="radio" name="pd_color" value="{{ color }}"
+               {% if forloop.first %}checked{% endif %}
+               onchange="onColorChange(this)">
+        <span class="pd-color-swatch" style="background:{{ color|color_hex }};"></span>
+        <span class="pd-swatch-tooltip">{{ color }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Size selector -->
+    {% if product.unique_sizes %}
+    <div class="pd-option-label">Size <span id="selectedSizeLabel">—</span></div>
+    <div class="pd-sizes" id="sizeSelector">
+      {% for variant in variants %}
+        {% if variant.size %}
+        <label class="pd-size-wrap {% if variant.stock == 0 %}unavailable{% endif %}"
+               data-variant-id="{{ variant.id }}"
+               data-stock="{{ variant.stock }}">
+          <input type="radio" name="pd_size" value="{{ variant.size }}"
+                 {% if variant.stock == 0 %}disabled{% endif %}
+                 onchange="onSizeChange(this, {{ variant.id }})">
+          <span class="pd-size-chip">{{ variant.size }}</span>
+        </label>
+        {% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- CTA -->
+    <div class="pd-cta">
+      <button class="pd-btn-cart" id="addToCartBtn"
+              {% if stock_status == 'out_of_stock' %}disabled{% endif %}
+              onclick="addToCart()">
+        {% if stock_status == 'out_of_stock' %}Sold Out{% else %}Add to Collection{% endif %}
+      </button>
+      <button class="pd-btn-wishlist" id="wishlistBtn" onclick="toggleWishlist({{ product.id }})">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Notify me when back in stock -->
+    {% if stock_status == 'out_of_stock' %}
+    <div class="pd-notify show" id="notifyBox">
+      <svg width="14" height="14" fill="none" stroke="var(--accent)" stroke-width="1.5" viewBox="0 0 24 24">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+      <input type="email" placeholder="Your email for restock alerts…" id="notifyEmail">
+      <button onclick="subscribeNotify()">Notify Me</button>
+    </div>
+    {% endif %}
+
+    <!-- Highlights -->
+    <div class="pd-highlights">
+      <div class="pd-highlights-title">Product Highlights</div>
+      {% if product.highlights.all %}
+        {% for h in product.highlights.all %}
+        <div class="pd-highlight-item">
+          <svg class="pd-highlight-icon" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <span>{{ h.text }}</span>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="pd-highlight-item">
+          <svg class="pd-highlight-icon" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          <span><strong>Premium Material</strong> — Crafted from the finest available materials</span>
+        </div>
+        <div class="pd-highlight-item">
+          <svg class="pd-highlight-icon" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          <span><strong>Handcrafted</strong> — Each piece individually inspected</span>
+        </div>
+        <div class="pd-highlight-item">
+          <svg class="pd-highlight-icon" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          <span><strong>Sustainable</strong> — Ethically sourced &amp; eco-conscious packaging</span>
+        </div>
+        <div class="pd-highlight-item">
+          <svg class="pd-highlight-icon" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          <span><strong>Exclusive Design</strong> — Limited availability, season-defining style</span>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Accordion: Details / Shipping / Returns -->
+    <div class="pd-accordion">
+
+      <div class="pd-acc-item">
+        <button class="pd-acc-trigger" onclick="toggleAcc(this)">
+          Product Details
+          <span class="pd-acc-arrow">▾</span>
+        </button>
+        <div class="pd-acc-body">
+          <div class="pd-acc-content">
+            {% if product.description %}
+              {{ product.description|linebreaksbr }}
+            {% else %}
+              <p>Meticulously crafted for the discerning eye. This piece embodies ALAIA's commitment to refined luxury — where every stitch, fold, and finish is considered. Wear it as an expression, not an accessory.</p>
+            {% endif %}
+            {% if default_variant.sku %}
+            <p style="margin-top:10px;font-size:10px;color:var(--dim)">SKU: <span id="pdSku">{{ default_variant.sku }}</span></p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="pd-acc-item">
+        <button class="pd-acc-trigger" onclick="toggleAcc(this)">
+          Shipping &amp; Delivery
+          <span class="pd-acc-arrow">▾</span>
+        </button>
+        <div class="pd-acc-body">
+          <div class="pd-acc-content">
+            <ul>
+              <li>Standard delivery: 3–5 business days</li>
+              <li>Express delivery: 1–2 business days</li>
+              <li>Free shipping on orders above ₹2,999</li>
+              <li>Discreet, signature packaging on all orders</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="pd-acc-item">
+        <button class="pd-acc-trigger" onclick="toggleAcc(this)">
+          Returns &amp; Exchanges
+          <span class="pd-acc-arrow">▾</span>
+        </button>
+        <div class="pd-acc-body">
+          <div class="pd-acc-content">
+            <ul>
+              <li>14-day returns on unworn items in original condition</li>
+              <li>Free returns on all full-price pieces</li>
+              <li>Sale items are final sale</li>
+              <li>Exchange requests processed within 2 business days</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <!-- /accordion -->
+
+  </div>
+  <!-- /pd-info -->
+
+</div>
+<!-- /pd-main -->
+
+
+<!-- ── Reviews Section ──────────────────────────────────────────── -->
+<div class="pd-section" id="pd-reviews" style="margin-top:60px">
+  <div class="pd-section-header">
+    <h2 class="pd-section-title">Client <em>Reviews</em></h2>
+    <div class="pd-section-line"></div>
+  </div>
+
+  <!-- Summary bar -->
+  {% if review_count > 0 %}
+  <div class="pd-review-summary">
+    <div class="pd-big-rating">
+      <div class="pd-big-num">{{ avg_rating }}</div>
+      <div class="pd-big-stars">
+        {% for i in "12345" %}
+        <svg class="star {% if forloop.counter > avg_rating %}empty{% endif %}"
+             viewBox="0 0 24 24"
+             fill="{% if forloop.counter <= avg_rating %}currentColor{% else %}none{% endif %}"
+             stroke="currentColor" stroke-width="1.5">
+          <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
+        </svg>
+        {% endfor %}
+      </div>
+      <div class="pd-rating-total">{{ review_count }} review{{ review_count|pluralize }}</div>
+    </div>
+    <div class="pd-star-bars">
+      {% for star, count in star_breakdown.items %}
+      <div class="pd-star-row">
+        <span class="pd-star-label">{{ star }}★</span>
+        <div class="pd-bar-track">
+          <div class="pd-bar-fill"
+               style="width:{% if review_count > 0 %}{% widthratio count review_count 100 %}{% else %}0{% endif %}%"></div>
+        </div>
+        <span class="pd-star-count">{{ count }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Review cards -->
+  {% for review in reviews %}
+  <div class="pd-review-card">
+    <div class="pd-review-header">
+      <div>
+        <div class="pd-reviewer">{{ review.user.get_full_name|default:review.user.username }}</div>
+        <div class="pd-review-date">{{ review.created_at|date:"d M Y" }}</div>
+      </div>
+    </div>
+    <div class="pd-review-stars">
+      {% for i in "12345" %}
+      <svg class="star {% if forloop.counter > review.rating %}empty{% endif %}"
+           viewBox="0 0 24 24"
+           fill="{% if forloop.counter <= review.rating %}currentColor{% else %}none{% endif %}"
+           stroke="currentColor" stroke-width="1.5">
+        <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
+      </svg>
+      {% endfor %}
+    </div>
+    <div class="pd-review-text">{{ review.comment }}</div>
+  </div>
+  {% endfor %}
+
+  {% else %}
+  <div class="pd-no-reviews">No reviews yet — be the first to share your experience.</div>
+  {% endif %}
+
+  <!-- Write a review -->
+  {% if user.is_authenticated and not user_reviewed %}
+  <div class="pd-review-form-wrap">
+    <div class="pd-form-title">Write a Review</div>
+    <div class="pd-star-picker" id="starPicker">
+      {% for i in "12345" %}
+      <svg class="star-pick" data-val="{{ forloop.counter }}"
+           viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
+      </svg>
+      {% endfor %}
+    </div>
+    <textarea class="pd-review-textarea" id="reviewText" placeholder="Share your honest experience with this piece…"></textarea>
+    <button class="pd-submit-btn" onclick="submitReview({{ product.id }})">Submit Review</button>
+    <div class="pd-form-msg" id="reviewMsg"></div>
+  </div>
+  {% elif not user.is_authenticated %}
+  <div style="text-align:center;padding:24px 0;font-size:11px;letter-spacing:.06em;color:var(--muted)">
+    <a href="{% url 'account_login' %}" style="color:var(--accent);text-decoration:none">Sign in</a> to leave a review
+  </div>
+  {% endif %}
+
+</div>
+<!-- /reviews -->
+
+
+<!-- ── Related Products ─────────────────────────────────────────── -->
+{% if related %}
+<div class="pd-section">
+  <div class="pd-section-header">
+    <h2 class="pd-section-title">You May Also <em>Desire</em></h2>
+    <div class="pd-section-line"></div>
+  </div>
+  <div class="pd-related-grid">
+    {% for rp in related %}
+    {% with fv=rp.variants.first %}
+    <a class="product-card" href="{% url 'products:product_detail' rp.slug %}"
+       style="animation-delay:{{ forloop.counter0 }}00ms">
+      <div class="product-img-wrap">
+        {% if fv and fv.images.first %}
+          <img class="product-img" src="{{ fv.images.first.image.url }}"
+               alt="{{ rp.name }}" loading="lazy">
+        {% else %}
+          <svg width="32" height="32" fill="none" stroke="var(--border)" stroke-width="1" viewBox="0 0 24 24">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+        {% endif %}
+        {% if rp.is_featured %}
+          <span class="product-badge badge-featured">Featured</span>
+        {% elif fv and fv.sales_price %}
+          <span class="product-badge badge-sale">Sale</span>
+        {% endif %}
+        <button class="product-wishlist" onclick="event.preventDefault();toggleWishlist({{ rp.id }})">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+        </button>
+        <div class="product-overlay"><button class="quick-view-btn">View Details</button></div>
+      </div>
+      <div class="product-info">
+        <div class="product-brand">{{ rp.brand.name }}</div>
+        <div class="product-name">{{ rp.name }}</div>
+        <div class="price-wrap">
+          {% if fv %}
+            {% if fv.sales_price %}
+              <span class="price sale">₹{{ fv.sales_price|floatformat:0 }}</span>
+              <span class="price-old">₹{{ fv.price|floatformat:0 }}</span>
+            {% else %}
+              <span class="price">₹{{ fv.price|floatformat:0 }}</span>
+            {% endif %}
+          {% endif %}
+        </div>
+        {% with stock=rp.total_stock %}
+        <div class="stock-label">
+          <span class="stock-dot {% if stock == 0 %}stock-zero{% elif stock <= 10 %}stock-low{% else %}stock-ok{% endif %}"></span>
+          {% if stock == 0 %}Out of stock{% elif stock <= 10 %}{{ stock }} left{% else %}In stock{% endif %}
+        </div>
+        {% endwith %}
+      </div>
+    </a>
+    {% endwith %}
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Toast notification -->
+<div class="pd-toast" id="pdToast">
+  <div class="pd-toast-dot"></div>
+  <span id="pdToastMsg">Added to collection</span>
+</div>
+
+{% endif %}{# end product available check #}
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+(function(){
+'use strict';
+
+const CSRF = () => document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+/* ── ZOOM ───────────────────────────────────────────────────────── */
+const stage = document.getElementById('zoomStage');
+const mainImg = document.getElementById('mainImg');
+const lens  = document.getElementById('zoomLens');
+if(stage && mainImg){
+  const ZOOM = 2.5;
+  stage.addEventListener('mousemove', e => {
+    const r = stage.getBoundingClientRect();
+    let x = e.clientX - r.left;
+    let y = e.clientY - r.top;
+    x = Math.max(0, Math.min(r.width,  x));
+    y = Math.max(0, Math.min(r.height, y));
+    if(lens){
+      lens.style.left = x + 'px';
+      lens.style.top  = y + 'px';
+    }
+    const px = (x / r.width)  * 100;
+    const py = (y / r.height) * 100;
+    mainImg.style.transformOrigin = px + '% ' + py + '%';
+    mainImg.style.transform = `scale(${ZOOM})`;
+  });
+  stage.addEventListener('mouseleave', () => {
+    mainImg.style.transform = 'scale(1)';
+    if(lens) lens.style.display = 'none';
+  });
+  stage.addEventListener('mouseenter', () => {
+    if(lens) lens.style.display = 'block';
+  });
+}
+
+/* ── THUMBNAILS ─────────────────────────────────────────────────── */
+document.querySelectorAll('.pd-thumb').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.pd-thumb').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    if(mainImg) mainImg.src = t.dataset.src;
+  });
+});
+
+/* ── VARIANT FETCH (colour/size change) ─────────────────────────── */
+function fetchVariant(variantId){
+  fetch(`/products/api/variant/${variantId}/`)
+    .then(r => r.json())
+    .then(d => {
+      const priceEl = document.getElementById('pdPrice');
+      const origEl  = document.getElementById('pdPriceOrig');
+      const discEl  = document.getElementById('pdDisc');
+      const skuEl   = document.getElementById('pdSku');
+      if(d.sales_price){
+        if(priceEl){ priceEl.textContent = '₹' + parseInt(d.sales_price).toLocaleString('en-IN'); priceEl.classList.add('sale-price'); }
+        if(origEl) { origEl.textContent = '₹' + parseInt(d.price).toLocaleString('en-IN'); origEl.style.display = ''; }
+        if(discEl) {
+          const pct = Math.round((d.price - d.sales_price) / d.price * 100);
+          discEl.textContent = pct + '% OFF'; discEl.style.display = '';
+        }
+      } else {
+        if(priceEl){ priceEl.textContent = '₹' + parseInt(d.price).toLocaleString('en-IN'); priceEl.classList.remove('sale-price'); }
+        if(origEl) origEl.style.display = 'none';
+        if(discEl) discEl.style.display = 'none';
+      }
+      if(skuEl && d.sku) skuEl.textContent = d.sku;
+      // Update stock badge
+      const sb = document.getElementById('stockBadge');
+      if(sb){
+        sb.className = 'pd-stock';
+        if(d.stock === 0){
+          sb.classList.add('stock-out');
+          sb.innerHTML = '<span class="sdot"></span>Out of Stock';
+          document.getElementById('addToCartBtn').disabled = true;
+          document.getElementById('addToCartBtn').textContent = 'Sold Out';
+          const nb = document.getElementById('notifyBox');
+          if(nb) nb.classList.add('show');
+        } else if(d.stock <= 10){
+          sb.classList.add('stock-low');
+          sb.innerHTML = `<span class="sdot"></span>Only ${d.stock} left — order soon`;
+          document.getElementById('addToCartBtn').disabled = false;
+          document.getElementById('addToCartBtn').textContent = 'Add to Collection';
+        } else {
+          sb.classList.add('stock-in');
+          sb.innerHTML = '<span class="sdot"></span>In Stock';
+          document.getElementById('addToCartBtn').disabled = false;
+          document.getElementById('addToCartBtn').textContent = 'Add to Collection';
+        }
+      }
+      // Update main image if variant has images
+      if(d.images && d.images.length && mainImg){
+        mainImg.src = d.images[0].url;
+      }
+    })
+    .catch(console.error);
+}
+
+window.onColorChange = function(input){
+  const label = document.getElementById('selectedColourLabel');
+  if(label) label.textContent = input.value;
+};
+
+window.onSizeChange = function(input, variantId){
+  const label = document.getElementById('selectedSizeLabel');
+  if(label) label.textContent = input.value;
+  fetchVariant(variantId);
+};
+
+/* ── ADD TO CART ────────────────────────────────────────────────── */
+window.addToCart = function(){
+  const sizeInput = document.querySelector('input[name="pd_size"]:checked');
+  if(document.querySelectorAll('input[name="pd_size"]').length > 0 && !sizeInput){
+    showToast('Please select a size first', true);
+    return;
+  }
+  // Integrate with your cart backend here
+  showToast('Added to your collection');
+};
+
+/* ── WISHLIST ───────────────────────────────────────────────────── */
+window.toggleWishlist = function(productId){
+  const btn = document.getElementById('wishlistBtn');
+  if(!btn) return;
+  const active = btn.classList.toggle('active');
+  showToast(active ? 'Saved to wishlist' : 'Removed from wishlist');
+  // fetch(`/wishlist/toggle/${productId}/`, { method:'POST', headers:{'X-CSRFToken':CSRF()} });
+};
+
+/* ── COUPON COPY ────────────────────────────────────────────────── */
+window.copyCoupon = function(code){
+  navigator.clipboard.writeText(code).then(() => showToast(`Code "${code}" copied!`));
+};
+
+/* ── ACCORDION ──────────────────────────────────────────────────── */
+window.toggleAcc = function(trigger){
+  const body = trigger.nextElementSibling;
+  const isOpen = body.classList.contains('open');
+  // Close all
+  document.querySelectorAll('.pd-acc-body').forEach(b => b.classList.remove('open'));
+  document.querySelectorAll('.pd-acc-trigger').forEach(t => t.classList.remove('open'));
+  if(!isOpen){
+    body.classList.add('open');
+    trigger.classList.add('open');
+  }
+};
+
+/* ── NOTIFY ─────────────────────────────────────────────────────── */
+window.subscribeNotify = function(){
+  const email = document.getElementById('notifyEmail')?.value?.trim();
+  if(!email || !email.includes('@')){ showToast('Enter a valid email', true); return; }
+  showToast('You\'ll be notified when back in stock!');
+};
+
+/* ── REVIEW FORM ────────────────────────────────────────────────── */
+let pickedRating = 0;
+document.querySelectorAll('.star-pick').forEach(s => {
+  s.addEventListener('mouseenter', () => {
+    document.querySelectorAll('.star-pick').forEach((x,i) => {
+      x.classList.toggle('lit', i < parseInt(s.dataset.val));
+      x.setAttribute('fill', i < parseInt(s.dataset.val) ? 'currentColor' : 'none');
+    });
+  });
+  s.addEventListener('click', () => {
+    pickedRating = parseInt(s.dataset.val);
+  });
+});
+document.getElementById('starPicker')?.addEventListener('mouseleave', () => {
+  document.querySelectorAll('.star-pick').forEach((x,i) => {
+    x.classList.toggle('lit', i < pickedRating);
+    x.setAttribute('fill', i < pickedRating ? 'currentColor' : 'none');
+  });
+});
+
+window.submitReview = function(productId){
+  const msg  = document.getElementById('reviewMsg');
+  const text = document.getElementById('reviewText')?.value?.trim();
+  if(!pickedRating){ msg.textContent = 'Please select a star rating.'; msg.className = 'pd-form-msg error'; return; }
+  if(!text || text.length < 10){ msg.textContent = 'Review must be at least 10 characters.'; msg.className = 'pd-form-msg error'; return; }
+  fetch(`/products/api/review/${productId}/`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','X-CSRFToken':CSRF()},
+    body: JSON.stringify({ rating: pickedRating, comment: text }),
+  })
+  .then(r => r.json())
+  .then(d => {
+    if(d.success){
+      msg.textContent = d.message;
+      msg.className = 'pd-form-msg success';
+      document.getElementById('reviewText').value = '';
+      pickedRating = 0;
+    } else {
+      msg.textContent = d.error;
+      msg.className = 'pd-form-msg error';
+    }
+  })
+  .catch(() => { msg.textContent = 'Something went wrong.'; msg.className = 'pd-form-msg error'; });
+};
+
+/* ── TOAST ──────────────────────────────────────────────────────── */
+let toastTimer;
+function showToast(msg, isError=false){
+  const t = document.getElementById('pdToast');
+  const m = document.getElementById('pdToastMsg');
+  if(!t||!m) return;
+  m.textContent = msg;
+  t.style.borderColor = isError ? 'var(--red)' : 'var(--accent)';
+  t.querySelector('.pd-toast-dot').style.background = isError ? 'var(--red)' : 'var(--accent)';
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+/* ── Auto-redirect if product becomes unavailable (poll) ────────── */
+{% if product.is_active and not product.is_blocked %}
+// Lightweight availability check on visibility change
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible'){
+    fetch(window.location.href, { method:'HEAD' })
+      .then(r => { if(r.redirected) window.location.href = r.url; });
+  }
+});
+{% endif %}
+
+})();
+</script>
+{% endblock %}

@@ -10,12 +10,11 @@ from django.views.decorators.csrf import csrf_protect
 from django.http import JsonResponse
 from django.utils import timezone
 from datetime import timedelta
-from .models import Category
 from django.utils.text import slugify
 import json
 from django.views.decorators.http import require_POST, require_http_methods
 from django.views.decorators.csrf import csrf_exempt
-from .models import Product, ProductVariant, VariantImage, Brand
+from products.models import Product, ProductVariant, VariantImage, Brand, Category,Occasion
 from .forms import ProductForm, ProductVariantForm
 from django.shortcuts import render, get_object_or_404, redirect
 from django.core.paginator import Paginator
@@ -314,11 +313,12 @@ def product_list(request):
     if per_page not in [5, 10, 25, 50]:
         per_page = 10
 
-    if show_deleted:
-        products = Product.objects.filter(is_deleted=True).select_related('category', 'brand')
-    else:
-        products = Product.objects.filter(is_deleted=False).select_related('category', 'brand')
+   
 
+    if show_deleted:
+        products = Product.all_objects.filter(is_deleted=True)
+    else:
+        products = Product.objects.all()
     if search_query:
         products = products.filter(
             Q(name__icontains=search_query) |
@@ -338,7 +338,10 @@ def product_list(request):
     paginator = Paginator(products, per_page)
     products_page = paginator.get_page(page_number)
 
-    categories = Category.objects.all()
+    categories = Category.objects.filter(
+    is_deleted=False,
+    is_active=True
+)
     brands = Brand.objects.all()
 
     context = {
@@ -352,66 +355,167 @@ def product_list(request):
         'active_products': active_products,
         'inactive_products': inactive_products,
         'deleted_count': deleted_count,
+        'occasions': Occasion.objects.all(),
     }
     return render(request, 'adminpanel/product_list.html', context)
 
-
+@require_POST
 def product_add(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-        except (json.JSONDecodeError, Exception):
-            data = request.POST
 
-        product_form = ProductForm(data)
+    data = request.POST
+    product_form = ProductForm(data)
 
-        if product_form.is_valid():
-            product = product_form.save()
+    if not product_form.is_valid():
+        return JsonResponse({
+            'success': False,
+            'errors': product_form.errors
+        }, status=400)
 
-            variants_data = data.get('variants', [])
+    product = product_form.save()
+    variants_json = data.get('variants')
 
-            for variant_data in variants_data:
+    if not variants_json:
+        return JsonResponse({
+            'success': False,
+            'message': 'Variants data is required.'
+        }, status=400)
 
-                if variant_data.get('image_count', 0) < 3:
-                    return JsonResponse({
-                    'success': False,
-                    'message': 'Each variant must have at least 3 images.'
-                }, status=400)
+    try:
+        variants_data = json.loads(variants_json)
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'message': 'Invalid variants JSON'
+        }, status=400)
 
-            variant = ProductVariant.objects.create(
+   
+    for index, variant_data in enumerate(variants_data, start=1):
+
+        image_count = int(variant_data.get('image_count', 0))
+
+        if image_count < 3:
+            return JsonResponse({
+                'success': False,
+                'message': 'Each variant must have at least 3 images.'
+            }, status=400)
+
+      
+        variant = ProductVariant.objects.create(
             product=product,
-            color=variant_data.get('color', ''),
-            size=variant_data.get('size', ''),
-            price=variant_data.get('price', 0),
+            color=variant_data.get('color'),
+            size=variant_data.get('size'),
+            price=variant_data.get('price'),
             sales_price=variant_data.get('sales_price') or None,
-            stock=variant_data.get('stock', 0),
+            stock=variant_data.get('stock'),
         )
 
-            return JsonResponse({'success': True, 'product_id': product.id, 'message': 'Product added successfully!'})
-        else:
-            return JsonResponse({'success': False, 'errors': product_form.errors}, status=400)
+        
+        image_key = f'variant_images_{index}'
+        images = request.FILES.getlist(image_key)
 
-    return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+        if image_count < 3:
+            return JsonResponse({
+                'success': False,
+                'message': 'Each variant must have at least 3 images uploaded.'
+            }, status=400)
 
+        for img in images:
+            VariantImage.objects.create(
+                variant=variant,
+                image=img
+            )
 
+    return JsonResponse({
+        'success': True,
+        'product_id': product.id,
+        'message': 'Product added successfully!'
+    })
 def product_edit(request, pk):
     product = get_object_or_404(Product, pk=pk, is_deleted=False)
 
     if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-        except Exception:
-            data = request.POST
 
-        product_form = ProductForm(data, instance=product)
-        if product_form.is_valid():
-            product = product_form.save()
-            return JsonResponse({'success': True, 'message': 'Product updated successfully!'})
-        else:
-            return JsonResponse({'success': False, 'errors': product_form.errors}, status=400)
+        product_form = ProductForm(request.POST, request.FILES, instance=product)
 
+        if not product_form.is_valid():
+            return JsonResponse({
+                'success': False,
+                'errors': product_form.errors
+            }, status=400)
+
+        # ✅ Correct save (NO commit=False)
+        product = product_form.save()
+
+        variants_json = request.POST.get('variants')
+
+        if variants_json:
+            try:
+                variants_data = json.loads(variants_json)
+            except json.JSONDecodeError:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Invalid variant data'
+                }, status=400)
+
+            for variant_data in variants_data:
+                variant_id = variant_data.get('id')
+
+                if not variant_id:
+                    continue
+
+                try:
+                    variant = ProductVariant.objects.get(
+                        id=variant_id,
+                        product=product
+                    )
+                except ProductVariant.DoesNotExist:
+                    continue
+
+                variant.color = variant_data.get('color')
+                variant.size = variant_data.get('size')
+
+                # Convert properly
+                variant.price = float(variant_data.get('price') or 0)
+                variant.sales_price = (
+                    float(variant_data.get('sales_price'))
+                    if variant_data.get('sales_price')
+                    else None
+                )
+                variant.stock = int(variant_data.get('stock') or 0)
+
+                variant.save()
+
+                # ----- HANDLE NEW IMAGES DURING EDIT -----
+                index = variants_data.index(variant_data) + 1
+                image_key = f'variant_images_{index}'
+                images = request.FILES.getlist(image_key)
+
+                if images:
+                    # Remove old images if new ones uploaded
+                    variant.images.all().delete()
+
+                    for img in images:
+                        VariantImage.objects.create(
+                            variant=variant,
+                            image=img
+                        )
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Product updated successfully!'
+        })
+
+    # ---- GET PART ----
     variants = []
     for v in product.variants.filter(is_deleted=False):
+
+        images = []
+        for img in v.images.all():
+            images.append({
+                'id': img.id,
+                'url': img.image.url,
+            })
+
         variants.append({
             'id': v.id,
             'color': v.color,
@@ -419,6 +523,7 @@ def product_edit(request, pk):
             'price': str(v.price),
             'sales_price': str(v.sales_price) if v.sales_price else '',
             'stock': v.stock,
+            'images': images,
         })
 
     return JsonResponse({
@@ -427,27 +532,34 @@ def product_edit(request, pk):
         'description': product.description,
         'category': product.category_id,
         'brand': product.brand_id,
-        'occasion': product.occasion,
+        'occasions': list(product.occasions.values_list('id', flat=True)),
         'is_active': product.is_active,
         'is_featured': product.is_featured,
         'variants': variants,
     })
-
-
 @require_POST
 def product_soft_delete(request, pk):
     product = get_object_or_404(Product, pk=pk, is_deleted=False)
     product.soft_delete()
     return JsonResponse({'success': True, 'message': f'"{product.name}" has been deactivated (soft deleted).'})
 
-
 @require_POST
-def product_restore(request, pk):
-    product = get_object_or_404(Product, pk=pk, is_deleted=True)
-    product.restore()
-    return JsonResponse({'success': True, 'message': f'"{product.name}" has been restored.'})
+def restore_product(request, pk):
+    try:
+        product = Product.all_objects.get(pk=pk)  
+        product.restore()
 
+        return JsonResponse({
+            "success": True,
+            "message": "Product restored successfully!"
+        })
 
+    except Product.DoesNotExist:
+        return JsonResponse({
+            "success": False,
+            "message": "Product not found"
+        })
+    
 @require_POST
 def product_toggle_status(request, pk):
     product = get_object_or_404(Product, pk=pk, is_deleted=False)

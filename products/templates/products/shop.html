@@ -1,429 +1,509 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load shop_filters %}
+
+{% block title %}Shop — ALAIA Collection{% endblock %}
+
 
 {% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+
 <link rel="stylesheet" href="{% static 'products/shop.css' %}">
 {% endblock %}
 
+
+
 {% block content %}
-<div class="shop-page">
 
+<!-- ── PAGE HEADER ──────────────────────────────────────── -->
+<div class="page-header">
+  <div>
+    <div class="breadcrumb">
+      <a href="{% url 'home' %}">Home</a> /
+      <span>{% if search_query %}Results for "{{ search_query }}"{% else %}Collection{% endif %}</span>
+    </div>
+    <h1 class="page-title">All <em>Products</em></h1>
+  </div>
+  <div class="result-count"><strong>{{ products.paginator.count }}</strong> pieces</div>
+</div>
 
-   <div class="sidebar-overlay" id="sidebarOverlay"></div>
+<!-- ── CONTROLS BAR ─────────────────────────────────────── -->
+<div class="controls-bar">
 
-   
-    <aside class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <h2 class="sidebar-title">Filters</h2>
-            <button class="sidebar-close" id="sidebarClose">&times;</button>
+  <div class="search-wrap">
+    <svg class="search-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+    <input type="text" class="search-input" id="searchInput"
+           placeholder="Search pieces…" value="{{ search_query }}">
+    <button class="search-cancel {% if search_query %}visible{% endif %}" id="clearBtn">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M18 6 6 18M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+
+  <button class="filter-toggle-btn
+    {% if selected_categories or selected_brands or selected_colors or selected_sizes or selected_occasions or price_min or price_max %}active{% endif %}"
+    id="filterToggle">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+      <line x1="4" y1="6" x2="20" y2="6"/>
+      <line x1="8" y1="12" x2="16" y2="12"/>
+      <line x1="11" y1="18" x2="13" y2="18"/>
+    </svg>
+    Refine
+    <span class="filter-dot
+      {% if selected_categories or selected_brands or selected_colors or selected_sizes or selected_occasions or price_min or price_max %}on{% endif %}">
+    </span>
+  </button>
+
+  <div class="sort-wrap">
+    <select class="sort-select" id="sortSelect">
+      <option value=""               {% if not sort               %}selected{% endif %}>New Arrivals</option>
+      <option value="price_low_high" {% if sort == 'price_low_high' %}selected{% endif %}>Price: Low → High</option>
+      <option value="price_high_low" {% if sort == 'price_high_low' %}selected{% endif %}>Price: High → Low</option>
+      <option value="popularity"     {% if sort == 'popularity'     %}selected{% endif %}>Popularity</option>
+      <option value="rating"         {% if sort == 'rating'         %}selected{% endif %}>Top Rated</option>
+      <option value="discount"       {% if sort == 'discount'       %}selected{% endif %}>Best Discount</option>
+    </select>
+    <span class="sort-arrow">▾</span>
+  </div>
+
+  <div class="view-toggle">
+    <button class="view-btn active" id="gridViewBtn" title="Grid">
+      <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+        <rect x="3" y="3" width="8" height="8"/><rect x="13" y="3" width="8" height="8"/>
+        <rect x="3" y="13" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/>
+      </svg>
+    </button>
+    <button class="view-btn" id="listViewBtn" title="List">
+      <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <line x1="3" y1="12" x2="21" y2="12"/>
+        <line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<!-- ── FILTER PANEL ──────────────────────────────────────── -->
+<div class="filter-panel
+  {% if selected_categories or selected_brands or selected_colors or selected_sizes or selected_occasions or price_min or price_max %}open{% endif %}"
+  id="filterPanel">
+  <div class="filter-panel-inner">
+
+    <!-- 1. Category -->
+    <div>
+      <div class="filter-group-title">Category</div>
+      <div class="filter-options">
+        {% for cat in categories %}
+        <label class="filter-option">
+          <input type="checkbox" class="cat-cb" value="{{ cat.id }}"
+            {% if cat.id|stringformat:"s" in selected_categories %}checked{% endif %}>
+          <span class="custom-check"></span>
+          <span>{{ cat.name }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- 2. Brand -->
+    <div>
+      <div class="filter-group-title">Brand</div>
+      <div class="filter-options">
+        {% for brand in brands %}
+        <label class="filter-option">
+          <input type="checkbox" class="brand-cb" value="{{ brand.id }}"
+            {% if brand.id|stringformat:"s" in selected_brands %}checked{% endif %}>
+          <span class="custom-check"></span>
+          <span>{{ brand.name }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- 3. Colour -->
+    <div>
+      <div class="filter-group-title">Colour</div>
+      <div class="color-options">
+        {% for color in available_colors %}
+        <label class="color-swatch-wrap">
+          <input type="checkbox" class="color-cb" value="{{ color.value }}"
+            {% if color.value in selected_colors %}checked{% endif %}>
+          <span class="color-swatch" style="background:{{ color.hex }};"></span>
+          <span class="swatch-tooltip">{{ color.label }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- 4. Size -->
+    <div>
+      <div class="filter-group-title">Size</div>
+      <div class="size-options">
+        {% for size in available_sizes %}
+        <label class="size-pill-wrap">
+          <input type="checkbox" class="size-cb" value="{{ size }}"
+            {% if size in selected_sizes %}checked{% endif %}>
+          <span class="size-pill">{{ size }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- 5. Occasion + Price -->
+    <div>
+      <div class="filter-group-title">Occasion</div>
+<div class="filter-options" style="max-height:120px;overflow-y:auto;padding-right:4px;">
+  {% for occ in available_occasions %}
+  <label class="filter-option">
+    <input type="checkbox" class="occ-cb" value="{{ occ.id }}"
+      {% if occ.id|stringformat:"s" in selected_occasions %}checked{% endif %}>
+    <span class="custom-check"></span>
+    <span>{{ occ.name }}</span>
+  </label>
+  {% endfor %}
+</div>
+
+      <div style="margin-top:18px;">
+        <div class="filter-group-title">Price Range</div>
+        <div class="price-row">
+          <input type="number" class="price-input" id="priceMin"
+                 placeholder="Min" value="{{ price_min|default:'' }}" min="0">
+          <span class="price-sep">—</span>
+          <input type="number" class="price-input" id="priceMax"
+                 placeholder="Max" value="{{ price_max|default:'' }}" min="0">
+        </div>
+        <button class="apply-btn" id="applyPrice">Apply</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── ACTIVE FILTER TAGS ────────────────────────────────── -->
+{% if selected_categories or selected_brands or selected_colors or selected_sizes or selected_occasions or price_min or price_max %}
+<div class="active-filters">
+
+  {% for cat in categories %}
+    {% if cat.id|stringformat:"s" in selected_categories %}
+    <a class="filter-tag" href="{{ request.path }}?{{ query_string_no_cat }}">
+      {{ cat.name }} <span>×</span>
+    </a>
+    {% endif %}
+  {% endfor %}
+
+  {% for brand in brands %}
+    {% if brand.id|stringformat:"s" in selected_brands %}
+    <a class="filter-tag" href="{{ request.path }}?{{ query_string_no_brand }}">
+      {{ brand.name }} <span>×</span>
+    </a>
+    {% endif %}
+  {% endfor %}
+
+  {% for color in available_colors %}
+    {% if color.value in selected_colors %}
+    <a class="filter-tag" href="{{ request.path }}?{{ query_string_no_color }}">
+      <span class="tag-color-dot" style="background:{{ color.hex }};"></span>
+      {{ color.label }} <span>×</span>
+    </a>
+    {% endif %}
+  {% endfor %}
+
+  {% for size in available_sizes %}
+    {% if size in selected_sizes %}
+    <a class="filter-tag" href="{{ request.path }}?{{ query_string_no_size }}">
+      Size {{ size }} <span>×</span>
+    </a>
+    {% endif %}
+  {% endfor %}
+
+  {% for occ in available_occasions %}
+  {% if occ.id|stringformat:"s" in selected_occasions %}
+  <a class="filter-tag" href="{{ request.path }}?{{ query_string_no_occ }}">
+    {{ occ.name }} <span>×</span>
+  </a>
+  {% endif %}
+{% endfor %}
+
+  {% if price_min or price_max %}
+  <a class="filter-tag" href="{{ request.path }}?{{ query_string_no_price }}">
+    ₹{{ price_min|default:"0" }} — ₹{{ price_max|default:"∞" }} <span>×</span>
+  </a>
+  {% endif %}
+
+  <a class="clear-all" href="{{ request.path }}{% if search_query %}?q={{ search_query }}{% endif %}">
+    Clear all
+  </a>
+</div>
+{% endif %}
+
+<!-- ── PRODUCTS ───────────────────────────────────────────── -->
+<div class="products-section">
+  <div class="deco-line"></div>
+
+  {% if products %}
+  <div class="products-grid" id="productsGrid">
+
+    {% for product in products %}
+    {% with fv=product.variants.first %}
+    <a class="product-card"
+   href="{% url 'products:product_detail' product.slug %}"
+       style="animation-delay:{{ forloop.counter0 }}00ms">
+
+      <div class="product-img-wrap">
+        {% if fv and fv.images.first %}
+          <img class="product-img" src="{{ fv.images.first.image.url }}"
+               alt="{{ product.name }}" loading="lazy">
+        {% else %}
+          <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+            <svg width="36" height="36" fill="none" stroke="var(--border)" stroke-width="1" viewBox="0 0 24 24">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+          </div>
+        {% endif %}
+
+        {% if product.is_featured %}
+          <span class="product-badge badge-featured">Featured</span>
+        {% elif fv and fv.sales_price %}
+          <span class="product-badge badge-sale">Sale</span>
+        {% endif %}
+
+        <button class="product-wishlist"
+                onclick="event.preventDefault(); toggleWishlist(this, {{ product.id }})">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+        </button>
+
+        <div class="product-overlay">
+          <button class="quick-view-btn">View Details</button>
+        </div>
+      </div>
+
+      <div class="product-info">
+        <div class="product-brand">{{ product.brand.name }}</div>
+        <div class="product-name">{{ product.name }}</div>
+
+        {% if product.occasions.all %}
+  {% for occ in product.occasions.all %}
+    <span class="product-occasion">{{ occ.name }}</span>
+  {% endfor %}
+{% endif %}
+        {% if product.unique_colors %}
+        <div class="card-colors">
+          {% for c in product.unique_colors %}
+            <span class="card-color-dot" style="background:{{ c|color_hex }};" title="{{ c }}"></span>
+          {% endfor %}
+          <span class="card-colors-label">
+            {{ product.unique_colors|length }} colour{{ product.unique_colors|length|pluralize }}
+          </span>
+        </div>
+        {% endif %}
+
+        {% if product.unique_sizes %}
+        <div class="card-sizes">
+          {% for s in product.unique_sizes %}
+            <span class="card-size-chip">{{ s }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="price-wrap">
+          {% if fv %}
+            {% if fv.sales_price %}
+              <span class="price sale">₹{{ fv.sales_price|floatformat:0 }}</span>
+              <span class="price-old">₹{{ fv.price|floatformat:0 }}</span>
+            {% else %}
+              <span class="price">₹{{ fv.price|floatformat:0 }}</span>
+            {% endif %}
+          {% endif %}
         </div>
 
-        <form method="GET" action="/shop/" id="filterForm">
-            <!-- Category Filter -->
-            <div class="filter-section">
-                <div class="filter-label">Category</div>
-                <div class="category-options">
-                    <button type="button" class="category-btn active" data-category="all">All</button>
-                    <button type="button" class="category-btn" data-category="men">Men</button>
-                    <button type="button" class="category-btn" data-category="women">Women</button>
-                    <button type="button" class="category-btn" data-category="kids">Kids</button>
-                </div>
-                <input type="hidden" name="category" id="categoryInput" value="all">
-            </div>
-
-            <!-- Brand Filter -->
-            <div class="filter-section">
-                <div class="filter-label">Brand</div>
-                <div class="brand-options">
-                    <label class="checkbox-wrapper">
-                        <input type="checkbox" name="brand" value="premium_sole">
-                        <span class="checkbox-label">Premium Sole</span>
-                    </label>
-                    <label class="checkbox-wrapper">
-                        <input type="checkbox" name="brand" value="urban_stride">
-                        <span class="checkbox-label">Urban Stride</span>
-                    </label>
-                    <label class="checkbox-wrapper">
-                        <input type="checkbox" name="brand" value="comfort_walk">
-                        <span class="checkbox-label">Comfort Walk</span>
-                    </label>
-                    <label class="checkbox-wrapper">
-                        <input type="checkbox" name="brand" value="elegance_feet">
-                        <span class="checkbox-label">Elegance Feet</span>
-                    </label>
-                    <label class="checkbox-wrapper">
-                        <input type="checkbox" name="brand" value="classic_step">
-                        <span class="checkbox-label">Classic Step</span>
-                    </label>
-                </div>
-            </div>
-
-            <!-- Price Range Filter -->
-            <div class="filter-section">
-                <div class="filter-label">Price Range</div>
-                <div class="price-inputs">
-                    <input type="number" class="price-input" name="min_price" placeholder="Min ₹" min="0">
-                    <input type="number" class="price-input" name="max_price" placeholder="Max ₹" min="0">
-                </div>
-            </div>
-
-            <!-- Filter Actions -->
-            <div class="filter-actions">
-                <button type="submit" class="apply-filter">Apply</button>
-                <button type="button" class="clear-filter" id="clearFilter">Clear All</button>
-            </div>
-        </form>
-    </aside>
-
-    <!-- Top Bar -->
-    <section class="top-bar">
-        <div class="container">
-            <div class="top-bar-content">
-                <button class="filter-toggle" id="filterToggle">Filter</button>
-                
-                <div class="search-wrapper">
-                    <input type="text" class="search-bar" id="searchBar" name="search" placeholder="Search for chappals..." autocomplete="off">
-                    <button class="search-clear" id="searchClear">&times;</button>
-                </div>
-
-                <div class="sort-wrapper">
-                    <select class="sort-select" id="sortSelect" name="sort">
-                        <option value="recommended">Recommended</option>
-                        <option value="price_low">Price: Low to High</option>
-                        <option value="price_high">Price: High to Low</option>
-                        <option value="name_asc">Name: A–Z</option>
-                        <option value="name_desc">Name: Z–A</option>
-                        <option value="rating">Rating: High to Low</option>
-                        <option value="newest">Newest First</option>
-                    </select>
-                </div>
-            </div>
+        {% with stock=product.total_stock %}
+        <div class="stock-label">
+          <span class="stock-dot
+            {% if stock == 0 %}stock-zero
+            {% elif stock <= 10 %}stock-low
+            {% else %}stock-ok{% endif %}">
+          </span>
+          {% if stock == 0 %}Out of stock
+          {% elif stock <= 10 %}Only {{ stock }} left
+          {% else %}In stock{% endif %}
         </div>
-    </section>
+        {% endwith %}
+      </div>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <div class="container">
-            <div class="results-bar">
-                <div class="results-count">
-                    Showing <strong>24</strong> of <strong>128</strong> products
-                </div>
-            </div>
+    </a>
+    {% endwith %}
+    {% endfor %}
 
-            <!-- Product Grid -->
-            <div class="product-grid">
-                <!-- Product Card 1 -->
-                <article class="product-card">
-                    <div class="product-image-wrapper">
-                        <span class="discount-badge">25% OFF</span>
-                        <button class="wishlist-btn" aria-label="Add to wishlist">♡</button>
-                        <img src="https://images.unsplash.com/photo-1603487742131-4160ec999306?w=600&h=800&fit=crop" alt="Classic Leather Chappal" class="product-image">
-                    </div>
-                    <div class="product-info">
-                        <div class="product-brand">Premium Sole</div>
-                        <h3 class="product-name">Classic Leather Chappal</h3>
-                        <div class="product-rating">
-                            <span class="stars">★★★★★</span>
-                            <span class="review-count">(248)</span>
-                        </div>
-                        <div class="product-pricing">
-                            <span class="current-price">₹1,499</span>
-                            <span class="original-price">₹1,999</span>
-                        </div>
-                        <button class="view-details-btn">View Details</button>
-                    </div>
-                </article>
+  </div>
 
-                <!-- Product Card 2 -->
-                <article class="product-card">
-                    <div class="product-image-wrapper">
-                        <button class="wishlist-btn" aria-label="Add to wishlist">♡</button>
-                        <img src="https://images.unsplash.com/photo-1560343090-f0409e92791a?w=600&h=800&fit=crop" alt="Urban Comfort Slide" class="product-image">
-                    </div>
-                    <div class="product-info">
-                        <div class="product-brand">Urban Stride</div>
-                        <h3 class="product-name">Urban Comfort Slide</h3>
-                        <div class="product-rating">
-                            <span class="stars">★★★★☆</span>
-                            <span class="review-count">(156)</span>
-                        </div>
-                        <div class="product-pricing">
-                            <span class="current-price">₹899</span>
-                        </div>
-                        <button class="view-details-btn">View Details</button>
-                    </div>
-                </article>
+  {% if products.has_other_pages %}
+  <div class="pagination">
+    <div class="pagination-info">
+      Showing <strong>{{ products.start_index }}–{{ products.end_index }}</strong>
+      of <strong>{{ products.paginator.count }}</strong> pieces
+    </div>
+    <div class="page-controls">
 
-                <!-- Product Card 3 -->
-                <article class="product-card">
-                    <div class="product-image-wrapper">
-                        <span class="discount-badge">15% OFF</span>
-                        <button class="wishlist-btn" aria-label="Add to wishlist">♡</button>
-                        <img src="https://images.unsplash.com/photo-1582897085656-c15e4d6d2a4d?w=600&h=800&fit=crop" alt="Elegance Strap Sandal" class="product-image">
-                    </div>
-                    <div class="product-info">
-                        <div class="product-brand">Elegance Feet</div>
-                        <h3 class="product-name">Elegance Strap Sandal</h3>
-                        <div class="product-rating">
-                            <span class="stars">★★★★★</span>
-                            <span class="review-count">(312)</span>
-                        </div>
-                        <div class="product-pricing">
-                            <span class="current-price">₹1,699</span>
-                            <span class="original-price">₹1,999</span>
-                        </div>
-                        <button class="view-details-btn">View Details</button>
-                    </div>
-                </article>
+      {% if products.has_previous %}
+      <a class="page-btn" href="?{{ query_string }}&page={{ products.previous_page_number }}">
+        <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      </a>
+      {% else %}
+      <span class="page-btn disabled"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></span>
+      {% endif %}
 
-                <!-- Product Card 4 -->
-                <article class="product-card">
-                    <div class="product-image-wrapper">
-                        <button class="wishlist-btn" aria-label="Add to wishlist">♡</button>
-                        <img src="https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=600&h=800&fit=crop" alt="Casual Daily Wear" class="product-image">
-                    </div>
-                    <div class="product-info">
-                        <div class="product-brand">Comfort Walk</div>
-                        <h3 class="product-name">Casual Daily Wear</h3>
-                        <div class="product-rating">
-                            <span class="stars">★★★★☆</span>
-                            <span class="review-count">(89)</span>
-                        </div>
-                        <div class="product-pricing">
-                            <span class="current-price">₹599</span>
-                        </div>
-                        <button class="view-details-btn">View Details</button>
-                    </div>
-                </article>
+      {% for num in products.paginator.page_range %}
+        {% if products.number == num %}
+          <span class="page-btn active">{{ num }}</span>
+        {% elif num == 1 or num == products.paginator.num_pages or num >= products.number|add:"-2" and num <= products.number|add:"2" %}
+          <a class="page-btn" href="?{{ query_string }}&page={{ num }}">{{ num }}</a>
+        {% elif num == products.number|add:"-3" or num == products.number|add:"3" %}
+          <span class="page-dots">…</span>
+        {% endif %}
+      {% endfor %}
 
-                <!-- Product Card 5 -->
-                <article class="product-card">
-                    <div class="product-image-wrapper">
-                        <span class="discount-badge">30% OFF</span>
-                        <button class="wishlist-btn" aria-label="Add to wishlist">♡</button>
-                        <img src="https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=600&h=800&fit=crop" alt="Premium Suede Chappal" class="product-image">
-                    </div>
-                    <div class="product-info">
-                        <div class="product-brand">Classic Step</div>
-                        <h3 class="product-name">Premium Suede Chappal</h3>
-                        <div class="product-rating">
-                            <span class="stars">★★★★★</span>
-                            <span class="review-count">(421)</span>
-                        </div>
-                        <div class="product-pricing">
-                            <span class="current-price">₹2,099</span>
-                            <span class="original-price">₹2,999</span>
-                        </div>
-                        <button class="view-details-btn">View Details</button>
-                    </div>
-                </article>
+      {% if products.has_next %}
+      <a class="page-btn" href="?{{ query_string }}&page={{ products.next_page_number }}">
+        <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+      </a>
+      {% else %}
+      <span class="page-btn disabled"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
+      {% endif %}
 
-                <!-- Product Card 6 -->
-                <article class="product-card">
-                    <div class="product-image-wrapper">
-                        <button class="wishlist-btn" aria-label="Add to wishlist">♡</button>
-                        <img src="https://images.unsplash.com/photo-1551107696-a4b0c5a0d9a2?w=600&h=800&fit=crop" alt="Sport Active Slide" class="product-image">
-                    </div>
-                    <div class="product-info">
-                        <div class="product-brand">Urban Stride</div>
-                        <h3 class="product-name">Sport Active Slide</h3>
-                        <div class="product-rating">
-                            <span class="stars">★★★★☆</span>
-                            <span class="review-count">(178)</span>
-                        </div>
-                        <div class="product-pricing">
-                            <span class="current-price">₹1,299</span>
-                        </div>
-                        <button class="view-details-btn">View Details</button>
-                    </div>
-                </article>
+    </div>
+  </div>
+  {% else %}
+  <div class="pagination">
+    <div class="pagination-info">
+      Showing <strong>{{ products.paginator.count }}</strong> piece{{ products.paginator.count|pluralize }}
+    </div>
+  </div>
+  {% endif %}
 
-                <!-- Product Card 7 -->
-                <article class="product-card">
-                    <div class="product-image-wrapper">
-                        <span class="discount-badge">20% OFF</span>
-                        <button class="wishlist-btn" aria-label="Add to wishlist">♡</button>
-                        <img src="https://images.unsplash.com/photo-1612902376799-0c4f64c6e3e0?w=600&h=800&fit=crop" alt="Designer T-Strap Sandal" class="product-image">
-                    </div>
-                    <div class="product-info">
-                        <div class="product-brand">Premium Sole</div>
-                        <h3 class="product-name">Designer T-Strap Sandal</h3>
-                        <div class="product-rating">
-                            <span class="stars">★★★★★</span>
-                            <span class="review-count">(267)</span>
-                        </div>
-                        <div class="product-pricing">
-                            <span class="current-price">₹1,999</span>
-                            <span class="original-price">₹2,499</span>
-                        </div>
-                        <button class="view-details-btn">View Details</button>
-                    </div>
-                </article>
+  {% else %}
+  <div class="no-results">
+    <div class="no-results-title">No pieces found</div>
+    <p>Try adjusting your search or <a href="{{ request.path }}">clear all filters</a></p>
+  </div>
+  {% endif %}
 
-                <!-- Product Card 8 -->
-                <article class="product-card">
-                    <div class="product-image-wrapper">
-                        <button class="wishlist-btn" aria-label="Add to wishlist">♡</button>
-                        <img src="https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=600&h=800&fit=crop" alt="Minimalist Flip Flop" class="product-image">
-                    </div>
-                    <div class="product-info">
-                        <div class="product-brand">Comfort Walk</div>
-                        <h3 class="product-name">Minimalist Flip Flop</h3>
-                        <div class="product-rating">
-                            <span class="stars">★★★★☆</span>
-                            <span class="review-count">(134)</span>
-                        </div>
-                        <div class="product-pricing">
-                            <span class="current-price">₹799</span>
-                        </div>
-                        <button class="view-details-btn">View Details</button>
-                    </div>
-                </article>
-            </div>
+</div>
+{% endblock %}
 
-            <!-- Pagination -->
-            <nav class="pagination" aria-label="Product pagination">
-                <button class="page-btn page-arrow" aria-label="Previous page">‹</button>
-                <button class="page-btn active" aria-label="Page 1">1</button>
-                <button class="page-btn" aria-label="Page 2">2</button>
-                <button class="page-btn" aria-label="Page 3">3</button>
-                <button class="page-btn" aria-label="Page 4">4</button>
-                <button class="page-btn" aria-label="Page 5">5</button>
-                <button class="page-btn page-arrow" aria-label="Next page">›</button>
-            </nav>
-        </div>
-    </main>
-     </div>
-    {% endblock %}
+
 {% block extra_js %}
-   
-   
-    
+<script>
+(function () {
 
-    <script>
-        // Sidebar Toggle
-        const filterToggle = document.getElementById('filterToggle');
-        const sidebar = document.getElementById('sidebar');
-        const sidebarClose = document.getElementById('sidebarClose');
-        const sidebarOverlay = document.getElementById('sidebarOverlay');
+  function buildUrl(params) {
+    const url = new URL(window.location.href);
+    Object.entries(params).forEach(([k, v]) => {
+      if (v === null || v === '' || v === undefined) url.searchParams.delete(k);
+      else url.searchParams.set(k, v);
+    });
+    url.searchParams.delete('page');
+    return url.toString();
+  }
 
-        function openSidebar() {
-            sidebar.classList.add('active');
-            sidebarOverlay.classList.add('active');
-            document.body.style.overflow = 'hidden';
-        }
+  function applyMulti(cls, key) {
+    document.querySelectorAll('.' + cls).forEach(cb => {
+      cb.addEventListener('change', () => {
+        const vals = [...document.querySelectorAll('.' + cls + ':checked')].map(c => c.value);
+        const url = new URL(window.location.href);
+        url.searchParams.delete(key);
+        url.searchParams.delete('page');
+        vals.forEach(v => url.searchParams.append(key, v));
+        window.location.href = url.toString();
+      });
+    });
+  }
 
-        function closeSidebar() {
-            sidebar.classList.remove('active');
-            sidebarOverlay.classList.remove('active');
-            document.body.style.overflow = '';
-        }
+  // Search
+  const searchInput = document.getElementById('searchInput');
+  const clearBtn    = document.getElementById('clearBtn');
+  let searchTimer;
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.trim();
+    clearBtn.classList.toggle('visible', q.length > 0);
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => { window.location.href = buildUrl({ q: q || null }); }, 400);
+  });
+  clearBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    clearBtn.classList.remove('visible');
+    window.location.href = buildUrl({ q: null });
+  });
 
-        filterToggle.addEventListener('click', openSidebar);
-        sidebarClose.addEventListener('click', closeSidebar);
-        sidebarOverlay.addEventListener('click', closeSidebar);
+  // Filter panel
+  const panel  = document.getElementById('filterPanel');
+  const toggle = document.getElementById('filterToggle');
+  toggle.addEventListener('click', () => {
+    panel.classList.toggle('open');
+    toggle.classList.toggle('active');
+  });
 
-        // Category Selection
-        const categoryBtns = document.querySelectorAll('.category-btn');
-        const categoryInput = document.getElementById('categoryInput');
+  // Sort
+  document.getElementById('sortSelect').addEventListener('change', function () {
+    window.location.href = buildUrl({ sort: this.value || null });
+  });
 
-        categoryBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                categoryBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                categoryInput.value = btn.dataset.category;
-            });
-        });
+  // Checkbox filters
+  applyMulti('cat-cb',   'category');
+  applyMulti('brand-cb', 'brand');
+  applyMulti('color-cb', 'color');
+  applyMulti('size-cb',  'size');
+  applyMulti('occ-cb',   'occasion');
 
-        // Clear Filter
-        const clearFilterBtn = document.getElementById('clearFilter');
-        const filterForm = document.getElementById('filterForm');
+  // Price
+  document.getElementById('applyPrice').addEventListener('click', () => {
+    window.location.href = buildUrl({
+      price_min: document.getElementById('priceMin').value || null,
+      price_max: document.getElementById('priceMax').value || null,
+    });
+  });
+  ['priceMin', 'priceMax'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('applyPrice').click();
+    });
+  });
 
-        clearFilterBtn.addEventListener('click', () => {
-            filterForm.reset();
-            categoryBtns.forEach(b => b.classList.remove('active'));
-            categoryBtns[0].classList.add('active');
-            categoryInput.value = 'all';
-        });
+  // View toggle
+  const grid        = document.getElementById('productsGrid');
+  const gridViewBtn = document.getElementById('gridViewBtn');
+  const listViewBtn = document.getElementById('listViewBtn');
+  if (grid) {
+    gridViewBtn.addEventListener('click', () => {
+      grid.classList.remove('list');
+      gridViewBtn.classList.add('active'); listViewBtn.classList.remove('active');
+    });
+    listViewBtn.addEventListener('click', () => {
+      grid.classList.add('list');
+      listViewBtn.classList.add('active'); gridViewBtn.classList.remove('active');
+    });
+  }
 
-        // Search Clear Button
-        const searchBar = document.getElementById('searchBar');
-        const searchClear = document.getElementById('searchClear');
+  // Wishlist
+  window.toggleWishlist = function (btn, productId) {
+    const isActive = btn.dataset.wishlisted === '1';
+    btn.dataset.wishlisted = isActive ? '0' : '1';
+    const path = btn.querySelector('path');
+    if (path) {
+      path.style.fill   = isActive ? 'none' : '#c9a96e';
+      path.style.stroke = isActive ? 'currentColor' : '#c9a96e';
+    }
+    btn.style.color = isActive ? '' : '#c9a96e';
+    // fetch(`/wishlist/toggle/${productId}/`, {
+    //   method: 'POST',
+    //   headers: { 'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1] }
+    // })
+  };
 
-        searchClear.addEventListener('click', () => {
-            searchBar.value = '';
-            searchBar.focus();
-        });
-
-        // Search and Sort functionality (for demonstration)
-        searchBar.addEventListener('input', function() {
-            const searchTerm = this.value.toLowerCase();
-            console.log('Searching for:', searchTerm);
-            // In Django, this would trigger a GET request with ?search=searchTerm
-        });
-
-        const sortSelect = document.getElementById('sortSelect');
-        sortSelect.addEventListener('change', function() {
-            console.log('Sorting by:', this.value);
-            // In Django, this would trigger a GET request with ?sort=value
-            // Example: window.location.href = `?sort=${this.value}`;
-        });
-
-        // Wishlist Toggle
-        const wishlistBtns = document.querySelectorAll('.wishlist-btn');
-        wishlistBtns.forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                this.innerHTML = this.innerHTML === '♡' ? '♥' : '♡';
-                // In Django, this would send an AJAX request to add/remove from wishlist
-            });
-        });
-
-        // Pagination
-        const pageBtns = document.querySelectorAll('.page-btn:not(.page-arrow)');
-        pageBtns.forEach(btn => {
-            btn.addEventListener('click', function() {
-                pageBtns.forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                // In Django: window.location.href = `?page=${this.textContent}`;
-            });
-        });
-
-        // Arrow pagination
-        const prevBtn = document.querySelector('.page-arrow:first-of-type');
-        const nextBtn = document.querySelector('.page-arrow:last-of-type');
-
-        prevBtn.addEventListener('click', function() {
-            const activePage = document.querySelector('.page-btn.active');
-            const prevPage = activePage.previousElementSibling;
-            if (prevPage && prevPage.classList.contains('page-btn') && !prevPage.classList.contains('page-arrow')) {
-                pageBtns.forEach(b => b.classList.remove('active'));
-                prevPage.classList.add('active');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-        });
-
-        nextBtn.addEventListener('click', function() {
-            const activePage = document.querySelector('.page-btn.active');
-            const nextPage = activePage.nextElementSibling;
-            if (nextPage && nextPage.classList.contains('page-btn') && !nextPage.classList.contains('page-arrow')) {
-                pageBtns.forEach(b => b.classList.remove('active'));
-                nextPage.classList.add('active');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-        });
-
-        // View Details Button (for demonstration)
-        const viewDetailsBtns = document.querySelectorAll('.view-details-btn');
-        viewDetailsBtns.forEach(btn => {
-            btn.addEventListener('click', function() {
-                // In Django, this would navigate to product detail page
-                console.log('Viewing details for:', this.closest('.product-card').querySelector('.product-name').textContent);
-                // Example: window.location.href = `/product/${productId}/`;
-            });
-        });
-    </script>
-
-    {% endblock %}
-   
+})();
+</script>
+{% endblock %}
