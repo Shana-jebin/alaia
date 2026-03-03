@@ -10,16 +10,20 @@
       {% endblock %}
     </title>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <link rel="stylesheet" href="{% static 'adminpanel/base.css' %}" />
-    {% block extra_css %}
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+
+<link href="https://unpkg.com/cropperjs@1.6.2/dist/cropper.min.css" rel="stylesheet"/>
+    
+    {% block extra_css %}
     {% endblock %}
+    
   </head>
 
   <body>
     <div class="container">
-      <!-- Sidebar -->
+     
       <aside class="sidebar">
         <div class="logo">
           <h1>ALAIA <span class="logo-dot"></span></h1>
@@ -37,11 +41,13 @@
             <span>Users</span>
           </a>
 
-          <a href="#" class="nav-item">
+          <a href="{% url 'list' %}" class="nav-item {% if request.path|slice:':20' == '/admin-panel/product' %}active{% endif %}">
             <span class="icon">📦</span>
             <span>Products</span>
           </a>
-          <a href="{% url 'admin_category_list' %}" class="nav-item {% if request.resolver_match.url_name in 'admin_category_list add_category edit_category delete_category' %}active{% endif %}">
+          <a href="{% url 'admin_category_list' %}" class="nav-item 
+{% if request.resolver_match.url_name == 'admin_category_list' or request.resolver_match.url_name == 'add_category' or request.resolver_match.url_name == 'edit_category' or request.resolver_match.url_name == 'delete_category' %}
+active{% endif %}">
             <span class="icon">🏷️</span>
             <span>Categories</span>
           </a>
@@ -86,38 +92,35 @@
 
       <!-- Main Content -->
       <main class="main-content">
+        {% if messages %}
+          <div class="django-messages">
+            {% for message in messages %}
+              <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
 
-    {% if messages %}
-    <div class="django-messages">
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}">
-                {{ message }}
-            </div>
-        {% endfor %}
+        {% block content %}
+
+        {% endblock %}
+      </main>
     </div>
-    {% endif %}
-
-    {% block content %}
-    {% endblock %}
-
-</main>
-
-    </div>
+    
 
     {% block extra_js %}
-
-<script>
-    setTimeout(function () {
-        let alerts = document.querySelectorAll('.alert');
-        alerts.forEach(function(alert) {
-            alert.style.opacity = "0";
-            alert.style.transform = "translateY(-10px)";
-            setTimeout(() => alert.remove(), 500);
-        });
-    }, 3000);
-</script>
-
-{% endblock %}
-
+   
+      <script>
+        setTimeout(function () {
+          let alerts = document.querySelectorAll('.alert')
+          alerts.forEach(function (alert) {
+            alert.style.opacity = '0'
+            alert.style.transform = 'translateY(-10px)'
+            setTimeout(() => alert.remove(), 500)
+          })
+        }, 3000)
+      </script>
+    {% endblock %}
+    
+    <script src="https://unpkg.com/cropperjs@1.6.2/dist/cropper.min.js"></script>
   </body>
 </html>

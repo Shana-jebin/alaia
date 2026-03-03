@@ -1,821 +1,15 @@
+{% extends 'adminpanel/base_admin.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Product Management — ALAÏA Admin</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-        :root {
-            --bg: #0a0a0a;
-            --sidebar-bg: #111111;
-            --surface: #1a1a1a;
-            --surface2: #222222;
-            --border: #2a2a2a;
-            --border-light: #333;
-            --text: #f0f0f0;
-            --text-muted: #888;
-            --text-dim: #555;
-            --accent: #e53935;
-            --accent-hover: #c62828;
-            --green: #4caf50;
-            --orange: #ff9800;
-            --red: #e53935;
-            --modal-bg: #141414;
-            --input-bg: #1e1e1e;
-            --input-border: #2e2e2e;
-            --input-focus: #3a3a3a;
-        }
-
-        body {
-            font-family: 'DM Sans', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-            overflow: hidden;
-        }
-
-        /* ── MAIN ── */
-        .main {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        .topbar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 24px 32px;
-            border-bottom: 1px solid var(--border);
-            background: var(--bg);
-        }
-
-        .topbar h2 {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 22px;
-            font-weight: 600;
-        }
-
-        .topbar p { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
-
-        .btn-add {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background 0.15s;
-            font-family: 'DM Sans', sans-serif;
-        }
-
-        .btn-add:hover { background: var(--accent-hover); }
-
-        /* ── CONTENT ── */
-        .content { flex: 1; overflow-y: auto; padding: 28px 32px; }
-
-        /* Stats row */
-        .stats-row {
-            display: flex;
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-
-        .stat-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 16px 20px;
-            flex: 1;
-        }
-
-        .stat-card .label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-        .stat-card .value { font-size: 26px; font-weight: 600; font-family: 'Space Grotesk', sans-serif; margin-top: 4px; }
-        .stat-card.total .value { color: var(--text); }
-        .stat-card.active .value { color: var(--green); }
-        .stat-card.inactive .value { color: var(--text-muted); }
-
-        /* Toolbar */
-        .toolbar {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-
-        .search-wrap {
-            position: relative;
-            flex: 1;
-            max-width: 420px;
-        }
-
-        .search-wrap svg {
-            position: absolute;
-            left: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-dim);
-            width: 16px;
-            height: 16px;
-        }
-
-        .search-input {
-            width: 100%;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            color: var(--text);
-            font-size: 14px;
-            padding: 9px 12px 9px 38px;
-            outline: none;
-            transition: border-color 0.15s;
-            font-family: 'DM Sans', sans-serif;
-        }
-
-        .search-input::placeholder { color: var(--text-dim); }
-        .search-input:focus { border-color: var(--border-light); }
-
-        .btn-deleted {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--text-muted);
-            padding: 9px 14px;
-            border-radius: 6px;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.15s;
-            font-family: 'DM Sans', sans-serif;
-            text-decoration: none;
-        }
-
-        .btn-deleted:hover { border-color: var(--border-light); color: var(--text); }
-
-        /* ── TABLE ── */
-        .table-wrap {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        table { width: 100%; border-collapse: collapse; }
-
-        thead tr { background: var(--surface2); }
-
-        th {
-            text-align: left;
-            font-size: 11px;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            color: var(--text-muted);
-            padding: 14px 16px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        td {
-            padding: 16px 16px;
-            border-bottom: 1px solid var(--border);
-            font-size: 14px;
-            vertical-align: middle;
-        }
-
-        tbody tr:last-child td { border-bottom: none; }
-
-        tbody tr { transition: background 0.1s; }
-        tbody tr:hover { background: rgba(255,255,255,0.025); }
-
-        /* Product cell */
-        .product-cell { display: flex; align-items: center; gap: 14px; }
-
-        .product-thumb {
-            width: 42px;
-            height: 42px;
-            background: var(--surface2);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            overflow: hidden;
-        }
-
-        .product-thumb img { width: 100%; height: 100%; object-fit: cover; }
-
-        .product-thumb svg { width: 20px; height: 20px; color: var(--text-dim); }
-
-        .product-name { font-weight: 500; color: var(--text); }
-        .product-brand { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
-
-        /* Stock badge */
-        .stock-badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-size: 13px;
-            font-weight: 500;
-            border: 1px solid;
-        }
-
-        .stock-badge.ok { border-color: var(--border); color: var(--text-muted); }
-        .stock-badge.low { border-color: var(--orange); color: var(--orange); }
-        .stock-badge.zero { border-color: var(--red); color: var(--red); }
-
-        /* Status badge */
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 13px;
-            font-weight: 500;
-        }
-
-        .status-badge::before {
-            content: '';
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: currentColor;
-        }
-
-        .status-badge.active { color: var(--green); }
-        .status-badge.inactive { color: var(--text-muted); }
-
-        /* Actions */
-        .actions-cell { display: flex; align-items: center; gap: 6px; }
-
-        .action-btn {
-            width: 34px;
-            height: 34px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: transparent;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            cursor: pointer;
-            color: var(--text-muted);
-            transition: all 0.15s;
-        }
-
-        .action-btn:hover { border-color: var(--border-light); color: var(--text); background: var(--surface2); }
-        .action-btn.delete:hover { border-color: #c62828; color: var(--red); background: rgba(229,57,53,0.08); }
-        .action-btn svg { width: 15px; height: 15px; }
-
-        /* ── MODAL ── */
-        .modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.75);
-            backdrop-filter: blur(4px);
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s;
-        }
-
-        .modal-overlay.open { opacity: 1; pointer-events: all; }
-
-        .modal {
-            background: var(--modal-bg);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            width: 100%;
-            max-width: 680px;
-            max-height: 90vh;
-            display: flex;
-            flex-direction: column;
-            transform: translateY(12px);
-            transition: transform 0.2s;
-            box-shadow: 0 24px 80px rgba(0,0,0,0.6);
-        }
-
-        .modal-overlay.open .modal { transform: translateY(0); }
-
-        .modal-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 22px 24px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .modal-header h3 {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 17px;
-            font-weight: 600;
-        }
-
-        .modal-close {
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--surface2);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            cursor: pointer;
-            color: var(--text-muted);
-            transition: all 0.15s;
-        }
-
-        .modal-close:hover { color: var(--text); }
-        .modal-close svg { width: 14px; height: 14px; }
-
-        .modal-body { overflow-y: auto; padding: 24px; flex: 1; }
-
-        .modal-footer {
-            padding: 18px 24px;
-            border-top: 1px solid var(--border);
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-        }
-
-        /* Form */
-        .section-title {
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            color: var(--text-muted);
-            margin-bottom: 14px;
-            margin-top: 24px;
-        }
-
-        .section-title:first-child { margin-top: 0; }
-
-        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-        .form-grid.full { grid-template-columns: 1fr; }
-
-        .form-group { display: flex; flex-direction: column; gap: 6px; }
-        .form-group.span2 { grid-column: span 2; }
-
-        .form-label {
-            font-size: 12px;
-            font-weight: 500;
-            color: var(--text-muted);
-            letter-spacing: 0.3px;
-        }
-
-        .required { color: var(--accent); margin-left: 2px; }
-
-        .form-input,
-        .form-select,
-        .form-textarea {
-            background: var(--input-bg);
-            border: 1px solid var(--input-border);
-            border-radius: 6px;
-            color: var(--text);
-            font-size: 13.5px;
-            padding: 9px 12px;
-            outline: none;
-            transition: border-color 0.15s;
-            font-family: 'DM Sans', sans-serif;
-            width: 100%;
-        }
-
-        .form-input::placeholder,
-        .form-textarea::placeholder { color: var(--text-dim); }
-        .form-input:focus,
-        .form-select:focus,
-        .form-textarea:focus { border-color: var(--border-light); }
-
-        .form-textarea { resize: vertical; min-height: 90px; }
-
-        .form-select { cursor: pointer; }
-        .form-select option { background: var(--surface); }
-
-        /* Toggle checkbox row */
-        .toggle-row {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            padding: 12px 0;
-        }
-
-        .toggle-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-        }
-
-        .toggle-item input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-            accent-color: var(--accent);
-            cursor: pointer;
-        }
-
-        .toggle-label { font-size: 13px; color: var(--text-muted); }
-
-        /* Variants */
-        .variants-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 14px;
-        }
-
-        .btn-add-variant {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            background: transparent;
-            border: 1px dashed var(--border-light);
-            color: var(--text-muted);
-            padding: 7px 14px;
-            border-radius: 6px;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.15s;
-            font-family: 'DM Sans', sans-serif;
-        }
-
-        .btn-add-variant:hover { border-color: var(--accent); color: var(--accent); }
-
-        .variant-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 12px;
-        }
-
-        .variant-card-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 14px;
-        }
-
-        .variant-card-title {
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--text-muted);
-        }
-
-        .btn-remove-variant {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            background: transparent;
-            border: none;
-            color: var(--red);
-            font-size: 12px;
-            cursor: pointer;
-            padding: 0;
-            font-family: 'DM Sans', sans-serif;
-        }
-
-        .btn-remove-variant:hover { opacity: 0.75; }
-
-        /* Image upload */
-        .image-upload-area {
-            border: 1px dashed var(--border-light);
-            border-radius: 6px;
-            padding: 24px;
-            text-align: center;
-            cursor: pointer;
-            transition: border-color 0.15s, background 0.15s;
-        }
-
-        .image-upload-area:hover { border-color: var(--accent); background: rgba(229,57,53,0.03); }
-
-        .image-upload-area svg { width: 22px; height: 22px; color: var(--text-dim); margin-bottom: 6px; }
-        .image-upload-area p { font-size: 13px; color: var(--text-muted); }
-        .image-upload-area span { font-size: 11px; color: var(--text-dim); }
-
-        .upload-preview {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 10px;
-        }
-
-        .upload-preview-item {
-            width: 64px;
-            height: 64px;
-            border-radius: 6px;
-            overflow: hidden;
-            border: 1px solid var(--border);
-            position: relative;
-        }
-
-        .upload-preview-item img { width: 100%; height: 100%; object-fit: cover; }
-
-        .upload-preview-item .remove-img {
-            position: absolute;
-            inset: 0;
-            background: rgba(0,0,0,0.6);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 16px;
-            color: #fff;
-        }
-
-        .upload-preview-item:hover .remove-img { display: flex; }
-
-        /* Buttons */
-        .btn {
-            padding: 10px 20px;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.15s;
-            border: 1px solid;
-            font-family: 'DM Sans', sans-serif;
-        }
-
-        .btn-ghost {
-            background: transparent;
-            border-color: var(--border);
-            color: var(--text-muted);
-        }
-
-        .btn-ghost:hover { border-color: var(--border-light); color: var(--text); }
-
-        .btn-primary {
-            background: var(--accent);
-            border-color: var(--accent);
-            color: #fff;
-        }
-
-        .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
-        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-
-        /* Confirm modal */
-        .confirm-modal {
-            background: var(--modal-bg);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 28px;
-            max-width: 380px;
-            width: 100%;
-            text-align: center;
-            box-shadow: 0 24px 60px rgba(0,0,0,0.5);
-        }
-
-        .confirm-modal .icon {
-            width: 52px;
-            height: 52px;
-            background: rgba(229,57,53,0.12);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 16px;
-        }
-
-        .confirm-modal .icon svg { width: 24px; height: 24px; color: var(--red); }
-        .confirm-modal h4 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
-        .confirm-modal p { font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 20px; }
-        .confirm-modal .confirm-note {
-            font-size: 11px;
-            color: var(--orange);
-            background: rgba(255,152,0,0.08);
-            border: 1px solid rgba(255,152,0,0.2);
-            border-radius: 5px;
-            padding: 8px 12px;
-            margin-bottom: 20px;
-        }
-
-        .confirm-modal .btn-row { display: flex; gap: 10px; justify-content: center; }
-
-        /* Toast */
-        .toast {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            background: var(--surface2);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 14px 18px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 13.5px;
-            z-index: 9999;
-            transform: translateY(80px);
-            transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
-            max-width: 320px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-        }
-
-        .toast.show { transform: translateY(0); }
-        .toast.success { border-left: 3px solid var(--green); }
-        .toast.error { border-left: 3px solid var(--red); }
-
-        .toast .t-icon { width: 18px; height: 18px; flex-shrink: 0; }
-        .toast.success .t-icon { color: var(--green); }
-        .toast.error .t-icon { color: var(--red); }
-
-        /* Empty state */
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: var(--text-dim);
-        }
-
-        .empty-state svg { width: 40px; height: 40px; margin-bottom: 12px; }
-        .empty-state p { font-size: 14px; }
-
-        /* View tabs */
-        .view-tabs {
-            display: flex;
-            gap: 4px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 4px;
-        }
-
-        .view-tab {
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            padding: 7px 14px;
-            border-radius: 5px;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.15s;
-            text-decoration: none;
-            color: var(--text-muted);
-            border: none;
-            background: transparent;
-            font-family: 'DM Sans', sans-serif;
-            white-space: nowrap;
-        }
-
-        .view-tab svg { width: 14px; height: 14px; }
-
-        .view-tab:hover { color: var(--text); background: var(--surface2); }
-
-        .view-tab.active {
-            background: var(--surface2);
-            color: var(--text);
-            border: 1px solid var(--border-light);
-        }
-
-        .view-tab .tab-count {
-            font-size: 11px;
-            background: var(--surface2);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 1px 7px;
-            color: var(--text-muted);
-            font-weight: 500;
-        }
-
-        .view-tab.active .tab-count {
-            background: var(--accent);
-            border-color: var(--accent);
-            color: #fff;
-        }
-
-        /* Deleted row style */
-        tr.deleted-row td { opacity: 0.55; }
-        tr.deleted-row .product-name { text-decoration: line-through; }
-        .restore-btn { color: var(--green) !important; border-color: rgba(76,175,80,0.3) !important; }
-        .restore-btn:hover { background: rgba(76,175,80,0.08) !important; border-color: var(--green) !important; }
-
-        /* Search cancel btn */
-        .search-cancel {
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: var(--surface2);
-            border: none;
-            border-radius: 4px;
-            width: 20px;
-            height: 20px;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            color: var(--text-muted);
-            transition: color 0.15s;
-            padding: 0;
-        }
-        .search-cancel:hover { color: var(--text); }
-        .search-cancel.visible { display: flex; }
-        .search-cancel svg { width: 11px; height: 11px; }
-        .search-input { padding-right: 34px; }
-
-        /* Pagination */
-        .pagination {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-top: 20px;
-            padding: 0 2px;
-        }
-
-        .pagination-info {
-            font-size: 13px;
-            color: var(--text-muted);
-        }
-
-        .pagination-info strong { color: var(--text); }
-
-        .pagination-controls {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .page-btn {
-            min-width: 34px;
-            height: 34px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            color: var(--text-muted);
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.15s;
-            text-decoration: none;
-            padding: 0 10px;
-            font-family: 'DM Sans', sans-serif;
-        }
-
-        .page-btn:hover { border-color: var(--border-light); color: var(--text); background: var(--surface2); }
-        .page-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; cursor: default; }
-        .page-btn.disabled { opacity: 0.35; pointer-events: none; cursor: default; }
-        .page-btn svg { width: 14px; height: 14px; }
-
-        .page-dots {
-            font-size: 13px;
-            color: var(--text-dim);
-            padding: 0 4px;
-            user-select: none;
-        }
-
-        /* per-page select */
-        .per-page-wrap {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 13px;
-            color: var(--text-muted);
-        }
-
-        .per-page-select {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            color: var(--text);
-            font-size: 13px;
-            padding: 5px 10px;
-            outline: none;
-            cursor: pointer;
-            font-family: 'DM Sans', sans-serif;
-            transition: border-color 0.15s;
-        }
-
-        .per-page-select:focus { border-color: var(--border-light); }
-
-        /* Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
-    </style>
-</head>
-<body>
-
-<!-- ── MAIN ── -->
+{% block title %}
+  Brand Management
+{% endblock %}
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'adminpanel/product.css' %}" />
+  <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+{% endblock %}
+
+{% block content %}
 <main class="main">
     <div class="topbar">
         <div>
@@ -1029,9 +223,7 @@
     </div>
 </main>
 
-<!-- ══════════════════════════════════════════════════════
-     ADD PRODUCT MODAL
-══════════════════════════════════════════════════════ -->
+
 <div class="modal-overlay" id="addModalOverlay">
     <div class="modal">
         <div class="modal-header">
@@ -1079,19 +271,11 @@
             <div class="form-grid full" style="margin-top:12px">
                 <div class="form-group">
                     <label class="form-label">Occasion</label>
-                    <select class="form-select" id="f-occasion">
-                        <option value="">Select occasion</option>
-                        <option value="casual">Casual</option>
-                        <option value="formal">Formal</option>
-                        <option value="sports">Sports</option>
-                        <option value="party">Party</option>
-                        <option value="wedding">Wedding</option>
-                        <option value="ethnic">Ethnic</option>
-                        <option value="beach">Beach</option>
-                        <option value="office">Office</option>
-                        <option value="outdoor">Outdoor</option>
-                        <option value="festive">Festive</option>
-                    </select>
+<select class="form-select" id="f-occasion" multiple>
+    {% for occ in occasions %}
+        <option value="{{ occ.id }}">{{ occ.name }}</option>
+    {% endfor %}
+</select>
                 </div>
             </div>
             <div class="toggle-row" style="margin-top:8px">
@@ -1121,12 +305,14 @@
 
         <div class="modal-footer">
             <button class="btn btn-ghost" id="cancelAddBtn">Cancel</button>
-            <button class="btn btn-primary" id="submitProductBtn">Add Product</button>
+            <button type="button" class="btn btn-primary" id="submitProductBtn">
+    Add Product
+</button>
         </div>
     </div>
 </div>
 
-<!-- CONFIRM DELETE MODAL -->
+
 <div class="modal-overlay" id="confirmOverlay">
     <div class="confirm-modal">
         <div class="icon">
@@ -1144,18 +330,63 @@
     </div>
 </div>
 
-<!-- TOAST -->
+
 <div class="toast" id="toast">
     <svg class="t-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
     <span id="toastMsg">Done</span>
 </div>
+<div class="modal-overlay" id="cropOverlay">
+    <div class="modal" style="max-width:500px;">
+        <div class="modal-header">
+            <h3>Crop Image</h3>
+        </div>
+        <div class="modal-body">
+            <img id="cropImage" style="max-width:100%;">
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeCrop()">Cancel</button>
+            <button class="btn btn-primary" id="cropBtn">Crop</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+
 
 <script>
+
+function getCSRFToken() {
+    const cookieValue = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken='))
+        ?.split('=')[1];
+    return cookieValue;
+}
+
+let occasionSelect;
+
+document.addEventListener('DOMContentLoaded', function() {
+
+    occasionSelect = new TomSelect("#f-occasion", {
+        plugins: ['remove_button'],
+        create: false,
+        persist: false
+    });
+
+});
 const CSRF = '{{ csrf_token }}';
 let variantCount = 0;
 let editingProductId = null;
 
-// ── MODAL ──
+let cropper;
+let currentInput;
+let currentVariantId;
+const variantImageCounts = {};
+const variantFiles = {};
+
+
 const addOverlay = document.getElementById('addModalOverlay');
 const confirmOverlay = document.getElementById('confirmOverlay');
 
@@ -1178,7 +409,9 @@ function resetForm() {
     document.getElementById('f-description').value = '';
     document.getElementById('f-category').value = '';
     document.getElementById('f-brand').value = '';
-    document.getElementById('f-occasion').value = '';
+   if (occasionSelect) {
+    occasionSelect.clear();
+}
     document.getElementById('f-is-active').checked = true;
     document.getElementById('f-is-featured').checked = false;
     document.getElementById('variantsContainer').innerHTML = '';
@@ -1186,7 +419,6 @@ function resetForm() {
     Object.keys(variantImageCounts).forEach(k => delete variantImageCounts[k]);
 }
 
-// ── VARIANTS ──
 function addVariant() {
     variantCount++;
     const n = variantCount;
@@ -1198,9 +430,8 @@ function addVariant() {
         <div class="variant-card-header">
             <span class="variant-card-title">Variant #${n}</span>
             <button class="btn-remove-variant" type="button" onclick="removeVariant(${n})">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                Remove
-            </button>
+   Remove
+</button>
         </div>
         <div class="form-grid">
             <div class="form-group">
@@ -1238,11 +469,11 @@ function addVariant() {
             </div>
             <div class="form-group">
                 <label class="form-label">Price <span class="required">*</span></label>
-                <input type="number" class="form-input v-price" placeholder="0.00" step="0.01">
+                <input type="number" class="form-input v-price" placeholder='0.00' step='0.01'>
             </div>
             <div class="form-group">
                 <label class="form-label">Sales Price</label>
-                <input type="number" class="form-input v-sales-price" placeholder="Optional" step="0.01">
+                <input type="number" class="form-input v-sales-price" placeholder='Optional' step='0.01'>
             </div>
             <div class="form-group">
                 <label class="form-label">Stock <span class="required">*</span></label>
@@ -1250,13 +481,23 @@ function addVariant() {
             </div>
         </div>
         <div class="form-group" style="margin-top:12px">
-            <label class="form-label">Variant Images <span class="required">*</span> <span style="font-size:11px;color:var(--orange);font-weight:400">(min. 3 required)</span></label>
-            <div class="image-upload-area" onclick="document.getElementById('imgInput-${n}').click()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                <p>Click to upload images</p>
-                <span>SVG, PNG, JPG or GIF (max. 800×400px)</span>
-            </div>
-            <input type="file" id="imgInput-${n}" style="display:none" multiple accept="image/*" onchange="previewImages(${n}, this)">
+    <label class="form-label">
+  Variant Images 
+  <span class="required">*</span>
+  <span style="font-size:11px;color:var(--orange);font-weight:400">
+    (min. 3 required)
+  </span>
+</label>
+            <div class="image-upload-area">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="17 8 12 3 7 8"></polyline>
+        <line x1="12" y1="3" x2="12" y2="15"></line>
+    </svg>
+    <p>Click to upload images</p>
+    <span>SVG, PNG, JPG or GIF (max. 800x400px)</span>
+</div>
+            <input type='file' id="imgInput-${n}" style="display:none" multiple accept="image/*" onchange="previewImages(${n}, this)">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
                 <span id="imgCount-${n}" style="font-size:11px;color:var(--text-dim)">0 images selected</span>
                 <span id="imgCountErr-${n}" style="font-size:11px;color:var(--red);display:none">⚠ At least 3 images required</span>
@@ -1265,40 +506,114 @@ function addVariant() {
         </div>
     `;
     container.appendChild(div);
-}
+    const uploadArea = div.querySelector('.image-upload-area');
+const fileInput = div.querySelector(`#imgInput-${n}`);
 
+uploadArea.addEventListener('click', function () {
+    fileInput.click();
+});
+}
 function removeVariant(n) {
     const el = document.getElementById(`variant-${n}`);
-    if (el) el.remove();
+    if (el) {
+        el.remove();
+    }
+
     delete variantImageCounts[n];
+    delete variantFiles[n];
 }
-
-// Track image counts per variant
-const variantImageCounts = {};
-
 function previewImages(n, input) {
-    const preview = document.getElementById(`preview-${n}`);
-    const countEl = document.getElementById(`imgCount-${n}`);
-    const errEl = document.getElementById(`imgCountErr-${n}`);
 
-    Array.from(input.files).forEach(file => {
+    const files = Array.from(input.files);
+    if (!files.length) return;
+
+    let index = 0;
+
+    function processNext() {
+        if (index >= files.length) return;
+
+        const file = files[index];
+        currentVariantId = n;
+
         const reader = new FileReader();
-        reader.onload = e => {
-            const item = document.createElement('div');
-            item.className = 'upload-preview-item';
-            item.dataset.variantId = n;
-            item.innerHTML = `
-                <img src="${e.target.result}" alt="">
-                <div class="remove-img" onclick="removePreviewImage(${n}, this.parentElement)">×</div>
-            `;
-            preview.appendChild(item);
-            variantImageCounts[n] = (variantImageCounts[n] || 0) + 1;
-            updateImageCount(n);
-        };
-        reader.readAsDataURL(file);
-    });
-}
 
+        reader.onload = function(e) {
+
+            const cropImg = document.getElementById('cropImage');
+            cropImg.src = e.target.result;
+            document.getElementById('cropOverlay').classList.add('open');
+
+            cropImg.onload = function () {
+
+                if (cropper) cropper.destroy();
+
+                cropper = new Cropper(cropImg, {
+                    aspectRatio: 1,
+                    viewMode: 1,
+                    autoCropArea: 1,
+                    responsive: true,
+                    background: false
+                });
+
+            }
+
+            // After cropping, continue next
+            document.getElementById('cropBtn').onclick = function () {
+
+                const canvas = cropper.getCroppedCanvas({
+                    width: 400,
+                    height: 400
+                });
+
+                canvas.toBlob(function(blob) {
+
+                    const croppedFile = new File(
+                        [blob],
+                        `cropped_${Date.now()}.png`,
+                        { type: "image/png" }
+                    );
+
+                    if (!variantFiles[n]) {
+                        variantFiles[n] = [];
+                    }
+
+                    variantFiles[n].push(croppedFile);
+
+                    const preview = document.getElementById(`preview-${n}`);
+                    const url = URL.createObjectURL(blob);
+
+                    const item = document.createElement('div');
+                    item.className = 'upload-preview-item';
+                    item.innerHTML = `
+                        <img src="${url}">
+                        <div class="remove-img"
+                            onclick="removePreviewImage(${n}, this.parentElement)">
+                            ×
+                        </div>
+                    `;
+
+                    preview.appendChild(item);
+
+                    variantImageCounts[n] =
+                        (variantImageCounts[n] || 0) + 1;
+
+                    updateImageCount(n);
+
+                    closeCrop();
+
+                    index++;
+                    processNext();
+
+                }, 'image/png');
+            };
+
+        };
+
+        reader.readAsDataURL(file);
+    }
+
+    processNext();
+}
 function removePreviewImage(n, item) {
     item.remove();
     variantImageCounts[n] = Math.max(0, (variantImageCounts[n] || 1) - 1);
@@ -1314,16 +629,23 @@ function updateImageCount(n) {
 }
 
 // ── SUBMIT PRODUCT ──
-document.getElementById('submitProductBtn').addEventListener('click', async () => {
-    const name = document.getElementById('f-name').value.trim();
-    const description = document.getElementById('f-description').value.trim();
-    const category = document.getElementById('f-category').value;
-    const brand = document.getElementById('f-brand').value;
+const submitBtn = document.getElementById('submitProductBtn');
 
-    if (!name || !category) {
-        showToast('Please fill in all required fields.', 'error');
-        return;
-    }
+if (submitBtn) {
+    submitBtn.addEventListener('click', async () => {
+
+        console.log("SUBMIT BUTTON CLICKED");
+
+        const name = document.getElementById('f-name').value.trim();
+        const description = document.getElementById('f-description').value.trim();
+        const category = document.getElementById('f-category').value;
+        const brand = document.getElementById('f-brand').value;
+
+        if (!name || !category) {
+            showToast('Please fill in all required fields.', 'error');
+            return;
+        }
+
 
     const variantCards = document.querySelectorAll('#variantsContainer .variant-card');
     const variants = [];
@@ -1338,13 +660,26 @@ document.getElementById('submitProductBtn').addEventListener('click', async () =
             if (errEl) errEl.style.display = 'inline';
             card.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-        variants.push({
-            color: card.querySelector('.v-color').value.trim(),
-            size: card.querySelector('.v-size').value.trim(),
-            price: parseFloat(card.querySelector('.v-price').value) || 0,
-            sales_price: parseFloat(card.querySelector('.v-sales-price').value) || null,
-            stock: parseInt(card.querySelector('.v-stock').value) || 0,
-        });
+        const color = card.querySelector('.v-color').value.trim();
+const size = card.querySelector('.v-size').value.trim();
+const price = parseFloat(card.querySelector('.v-price').value);
+const stock = parseInt(card.querySelector('.v-stock').value);
+
+if (!color || !size || !price || stock === null || stock === '') {
+    showToast('Please fill all variant required fields.', 'error');
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+}
+
+variants.push({
+    id: card.dataset.variantId || null,   // 👈 ADD THIS
+    color,
+    size,
+    price,
+    sales_price: parseFloat(card.querySelector('.v-sales-price').value) || null,
+    stock,
+    image_count: imgCount
+});
     }
 
     if (imageError) {
@@ -1369,24 +704,71 @@ document.getElementById('submitProductBtn').addEventListener('click', async () =
 
     try {
         const url = editingProductId
-            ? `/products/${editingProductId}/edit/`
-            : '/products/add/';
+        ? `/admin-panel/product/${editingProductId}/edit/`
+        : '/admin-panel/product/add/';
+        console.log("FETCH IS ABOUT TO RUN");
 
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-            body: JSON.stringify(payload),
+       
+const formData = new FormData();
+
+formData.append('name', name);
+formData.append('description', description);
+formData.append('category', category);
+formData.append('brand', brand);
+const selectedOccasions = occasionSelect.getValue();
+
+selectedOccasions.forEach(occ => {
+    formData.append('occasions', occ);
+});
+if (document.getElementById('f-is-active').checked) {
+    formData.append('is_active', 'on');
+}
+if (document.getElementById('f-is-featured').checked) {
+    formData.append('is_featured', 'on');
+}
+
+// variants JSON
+formData.append('variants', JSON.stringify(variants));
+
+variantCards.forEach(card => {
+    const id = card.id.replace('variant-', '');
+
+    if (variantFiles[id] && variantFiles[id].length > 0) {
+        variantFiles[id].forEach(file => {
+            formData.append(`variant_images_${id}`, file);
         });
-        const data = await res.json();
+    }
+});
+const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+        'X-CSRFToken': getCSRFToken()
+    },
+    body: formData
+});
 
-        if (data.success) {
-            showToast(data.message, 'success');
-            addOverlay.classList.remove('open');
-            setTimeout(() => location.reload(), 800);
-        } else {
-            const errs = Object.values(data.errors || {}).flat().join(', ');
-            showToast(errs || 'Something went wrong.', 'error');
-        }
+console.log("STATUS:", res.status);
+
+const text = await res.text();
+console.log("RAW RESPONSE:", text);
+
+if (!res.ok) {
+    const errText = await res.text();
+    console.log("SERVER ERROR:", errText);
+    showToast("Server error: " + errText, "error");
+    return;
+}
+
+const data = JSON.parse(text);
+
+if (data.success) {
+    showToast(data.message, 'success');
+    addOverlay.classList.remove('open');
+    setTimeout(() => location.reload(), 800);
+} else {
+    console.log("DJANGO ERRORS:", data);
+    showToast(JSON.stringify(data), 'error');
+}
     } catch (e) {
         showToast('Network error. Please try again.', 'error');
     } finally {
@@ -1394,11 +776,12 @@ document.getElementById('submitProductBtn').addEventListener('click', async () =
         btn.textContent = editingProductId ? 'Save Changes' : 'Add Product';
     }
 });
+} 
 
 // ── EDIT ──
 async function openEditModal(id) {
     try {
-        const res = await fetch(`/products/${id}/edit/`);
+        const res = await fetch(`/admin-panel/product/${id}/edit/`);
         const data = await res.json();
 
         editingProductId = id;
@@ -1409,22 +792,60 @@ async function openEditModal(id) {
         document.getElementById('f-description').value = data.description || '';
         document.getElementById('f-category').value = data.category || '';
         document.getElementById('f-brand').value = data.brand || '';
-        document.getElementById('f-occasion').value = data.occasion || '';
+        if (occasionSelect) {
+    occasionSelect.clear();
+
+    if (data.occasions && data.occasions.length > 0) {
+        occasionSelect.setValue(data.occasions);
+    }
+}
         document.getElementById('f-is-active').checked = data.is_active;
         document.getElementById('f-is-featured').checked = data.is_featured;
 
         document.getElementById('variantsContainer').innerHTML = '';
         variantCount = 0;
+        Object.keys(variantImageCounts).forEach(k => delete variantImageCounts[k]);
 
         (data.variants || []).forEach(v => {
-            addVariant();
-            const card = document.querySelector(`#variant-${variantCount}`);
-            card.querySelector('.v-color').value = v.color || '';
-            card.querySelector('.v-size').value = v.size || '';
-            card.querySelector('.v-price').value = v.price || '';
-            card.querySelector('.v-sales-price').value = v.sales_price || '';
-            card.querySelector('.v-stock').value = v.stock || 0;
-        });
+    addVariant();
+    const card = document.querySelector(`#variant-${variantCount}`);
+
+    card.dataset.variantId = v.id;  
+
+    card.querySelector('.v-color').value = v.color || '';
+    card.querySelector('.v-size').value = v.size || '';
+    card.querySelector('.v-price').value = v.price || '';
+    card.querySelector('.v-sales-price').value = v.sales_price || '';
+    card.querySelector('.v-stock').value = v.stock || 0;
+
+if (v.images && v.images.length > 0) {
+
+    const preview = document.getElementById(`preview-${variantCount}`);
+
+  
+    variantImageCounts[variantCount] = 0;
+
+    v.images.forEach(img => {
+
+        const item = document.createElement('div');
+        item.className = 'upload-preview-item';
+
+        item.innerHTML = `
+            <img src="${img.url}" style="width:100%;height:100%;object-fit:cover;">
+            <div class="remove-img"
+                onclick="removePreviewImage(${variantCount}, this.parentElement)">
+                ×
+            </div>
+        `;
+
+        preview.appendChild(item);
+
+        variantImageCounts[variantCount] += 1;
+    });
+
+    updateImageCount(variantCount);
+}
+});
 
         if ((data.variants || []).length === 0) addVariant();
 
@@ -1437,9 +858,11 @@ async function openEditModal(id) {
 // ── TOGGLE STATUS ──
 async function toggleStatus(id, btn) {
     try {
-        const res = await fetch(`/products/${id}/toggle-status/`, {
+        const res = await fetch(`/admin-panel/product/${id}/toggle-status/`, {
             method: 'POST',
-            headers: { 'X-CSRFToken': CSRF },
+           headers: {
+    'X-CSRFToken': getCSRFToken()
+},
         });
         const data = await res.json();
         if (data.success) {
@@ -1475,15 +898,17 @@ function closeConfirm() {
 document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
     if (!deleteTargetId) return;
     try {
-        const res = await fetch(`/products/${deleteTargetId}/soft-delete/`, {
+        const res = await fetch(`/admin-panel/product/${deleteTargetId}/soft-delete/`, {
             method: 'POST',
-            headers: { 'X-CSRFToken': CSRF },
+            headers: {
+    'X-CSRFToken': getCSRFToken()
+},
         });
         const data = await res.json();
         if (data.success) {
             const row = document.querySelector(`tr[data-id="${deleteTargetId}"]`);
             if (row) row.style.opacity = '0';
-            setTimeout(() => { if (row) row.remove(); }, 300);
+            
             showToast(data.message, 'success');
         }
     } catch (e) {
@@ -1508,16 +933,16 @@ function buildUrl(params = {}) {
     });
     return url.toString();
 }
-
-searchInput.addEventListener('input', (e) => {
-    const q = e.target.value.trim();
-    searchCancel.classList.toggle('visible', q.length > 0);
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => {
-        window.location.href = buildUrl({ q: q || null, page: null });
-    }, 400);
-});
-
+if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+        const q = e.target.value.trim();
+        searchCancel.classList.toggle('visible', q.length > 0);
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+            window.location.href = buildUrl({ q: q || null, page: null });
+        }, 400);
+    });
+}
 searchCancel.addEventListener('click', () => {
     searchInput.value = '';
     searchCancel.classList.remove('visible');
@@ -1534,9 +959,11 @@ document.getElementById('perPageSelect').addEventListener('change', (e) => {
 async function restoreProduct(id, btn) {
     btn.disabled = true;
     try {
-        const res = await fetch(`/products/${id}/restore/`, {
+        const res = await fetch(`/admin-panel/product/${id}/restore/`, {
             method: 'POST',
-            headers: { 'X-CSRFToken': CSRF },
+           headers: {
+    'X-CSRFToken': getCSRFToken()
+},
         });
         const data = await res.json();
         if (data.success) {
@@ -1566,6 +993,23 @@ function showToast(msg, type = 'success') {
     toast.classList.add('show');
     setTimeout(() => toast.classList.remove('show'), 3200);
 }
+function closeCrop() {
+    document.getElementById('cropOverlay').classList.remove('open');
+    if (cropper) {
+        cropper.destroy();
+        cropper = null;
+    }
+}
+
+// Make functions global for inline HTML calls
+window.previewImages = previewImages;
+window.removePreviewImage = removePreviewImage;
+window.addVariant = addVariant;
+window.removeVariant = removeVariant;
+window.confirmDelete = confirmDelete;
+window.restoreProduct = restoreProduct;
+window.toggleStatus = toggleStatus;
+window.openEditModal = openEditModal;
+
 </script>
-</body>
-</html>
+{% endblock %}

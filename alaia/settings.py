@@ -28,7 +28,7 @@ INSTALLED_APPS = [
     'accounts',
     'adminpanel',
     'user_profile',
-    'products',
+    'products.apps.ProductsConfig',
     'core',
     'django.contrib.sites',
     'allauth',
