@@ -1,0 +1,1015 @@
+{% extends 'adminpanel/base_admin.html' %}
+{% load static %}
+{% block title %}
+  Brand Management
+{% endblock %}
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'adminpanel/product.css' %}" />
+  <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<main class="main">
+    <div class="topbar">
+        <div>
+            <h2>Product Management</h2>
+            <p>Manage your products, inventory, and variants</p>
+        </div>
+        <button class="btn-add" id="openAddModal" {% if show_deleted %}style="display:none"{% endif %}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Product
+        </button>
+    </div>
+
+    <div class="content">
+        <!-- Stats -->
+        <div class="stats-row">
+            <div class="stat-card total">
+                <div class="label">Total Products</div>
+                <div class="value">{{ total_products }}</div>
+            </div>
+            <div class="stat-card active">
+                <div class="label">Active</div>
+                <div class="value">{{ active_products }}</div>
+            </div>
+            <div class="stat-card inactive">
+                <div class="label">Inactive</div>
+                <div class="value">{{ inactive_products }}</div>
+            </div>
+        </div>
+
+        <!-- Tabs + Toolbar -->
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+            <!-- View tabs -->
+            <div class="view-tabs">
+                <a href="?per_page={{ per_page }}" class="view-tab {% if not show_deleted %}active{% endif %}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                    Listed
+                    <span class="tab-count">{{ total_products }}</span>
+                </a>
+                <a href="?show=deleted&per_page={{ per_page }}" class="view-tab {% if show_deleted %}active{% endif %}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                    Unlisted
+                    <span class="tab-count">{{ deleted_count }}</span>
+                </a>
+            </div>
+
+            <!-- Right controls -->
+            <div style="display:flex;align-items:center;gap:10px;flex:1;justify-content:flex-end;">
+                <div class="search-wrap" style="max-width:340px;flex:1;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                    <input type="text" class="search-input" placeholder="Search products..." id="searchInput" value="{{ search_query }}">
+                    <button class="search-cancel {% if search_query %}visible{% endif %}" id="searchCancel" title="Clear search">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
+                <div class="per-page-wrap">
+                    <span>Show</span>
+                    <select class="per-page-select" id="perPageSelect">
+                        <option value="5" {% if per_page == 5 %}selected{% endif %}>5</option>
+                        <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+                        <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
+                        <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:35%">Product</th>
+                        <th>Category</th>
+                        <th>Price</th>
+                        <th>{% if show_deleted %}Unlisted On{% else %}Stock{% endif %}</th>
+                        <th>Status</th>
+                        <th style="text-align:right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="productTableBody">
+                {% for product in products %}
+                <tr data-id="{{ product.id }}" data-active="{{ product.is_active|lower }}" {% if show_deleted %}class="deleted-row"{% endif %}>
+                    <td>
+                        <div class="product-cell">
+                            <div class="product-thumb">
+                                {% with product.variants.first as v %}
+                                {% if v and v.images.first %}
+                                    <img src="{{ v.images.first.image.url }}" alt="{{ product.name }}">
+                                {% else %}
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                                {% endif %}
+                                {% endwith %}
+                            </div>
+                            <div>
+                                <div class="product-name">{{ product.name }}</div>
+                                <div class="product-brand">{{ product.brand.name }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="color:var(--text-muted)">{{ product.category.name|default:"—" }}</td>
+                    <td style="font-weight:500">
+                        {% if not show_deleted %}
+                        <span style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:1px">Starting from</span>
+                        ₹{{ product.min_price|floatformat:0 }}
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>
+                        {% if not show_deleted %}
+                        {% with product.total_stock as stock %}
+                        <span class="stock-badge {% if stock == 0 %}zero{% elif stock <= 10 %}low{% else %}ok{% endif %}">
+                            {{ stock }} units
+                        </span>
+                        {% endwith %}
+                        {% else %}
+                        <span style="font-size:12px;color:var(--text-dim)">{{ product.deleted_at|date:"M d, Y" }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if show_deleted %}
+                        <span class="status-badge inactive">Unlisted</span>
+                        {% else %}
+                        <span class="status-badge {% if product.is_active %}active{% else %}inactive{% endif %}" id="status-{{ product.id }}">
+                            {% if product.is_active %}Active{% else %}Inactive{% endif %}
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="actions-cell" style="justify-content:flex-end">
+                            {% if show_deleted %}
+                            <!-- Restore button -->
+                            <button class="action-btn restore-btn" title="Restore product" onclick="restoreProduct({{ product.id }}, this)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4"/></svg>
+                            </button>
+                            {% else %}
+                            <!-- Edit -->
+                            <button class="action-btn" title="Edit product" onclick="openEditModal({{ product.id }})">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            </button>
+                            <!-- Toggle Active/Inactive -->
+                            <button class="action-btn" title="Toggle status" onclick="toggleStatus({{ product.id }}, this)">
+                                {% if product.is_active %}
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+                                {% else %}
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                                {% endif %}
+                            </button>
+                            <!-- Soft Delete -->
+                            <button class="action-btn delete" title="Unlist product" onclick="confirmDelete({{ product.id }}, '{{ product.name|escapejs }}')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6">
+                        <div class="empty-state">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                            <p>No products found. Add your first product.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if products.has_other_pages %}
+        <div class="pagination">
+            <div class="pagination-info">
+                Showing <strong>{{ products.start_index }}–{{ products.end_index }}</strong> of <strong>{{ products.paginator.count }}</strong> products
+            </div>
+            <div class="pagination-controls">
+                {% if products.has_previous %}
+                <a href="?{% if show_deleted %}show=deleted&{% endif %}q={{ search_query }}&page={{ products.previous_page_number }}&per_page={{ per_page }}" class="page-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+                </a>
+                {% else %}
+                <span class="page-btn disabled"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></span>
+                {% endif %}
+
+                {% for num in products.paginator.page_range %}
+                    {% if products.number == num %}
+                        <span class="page-btn active">{{ num }}</span>
+                    {% elif num == 1 or num == products.paginator.num_pages or num >= products.number|add:"-2" and num <= products.number|add:"2" %}
+                        <a href="?{% if show_deleted %}show=deleted&{% endif %}q={{ search_query }}&page={{ num }}&per_page={{ per_page }}" class="page-btn">{{ num }}</a>
+                    {% elif num == products.number|add:"-3" or num == products.number|add:"3" %}
+                        <span class="page-dots">…</span>
+                    {% endif %}
+                {% endfor %}
+
+                {% if products.has_next %}
+                <a href="?{% if show_deleted %}show=deleted&{% endif %}q={{ search_query }}&page={{ products.next_page_number }}&per_page={{ per_page }}" class="page-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                </a>
+                {% else %}
+                <span class="page-btn disabled"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></span>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div class="pagination">
+            <div class="pagination-info">
+                Showing <strong>{{ products.paginator.count }}</strong> product{{ products.paginator.count|pluralize }}
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</main>
+
+
+<div class="modal-overlay" id="addModalOverlay">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 id="modalTitle">Add New Product</h3>
+            <button class="modal-close" id="closeAddModal">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+
+        <div class="modal-body">
+            <!-- Basic Information -->
+            <div class="section-title">Basic Information</div>
+            <div class="form-grid full">
+                <div class="form-group">
+                    <label class="form-label">Product Name <span class="required">*</span></label>
+                    <input type="text" class="form-input" id="f-name" placeholder="Enter product name">
+                </div>
+            </div>
+            <div class="form-grid full" style="margin-top:12px">
+                <div class="form-group">
+                    <label class="form-label">Description <span class="required">*</span></label>
+                    <textarea class="form-textarea" id="f-description" placeholder="Enter product description"></textarea>
+                </div>
+            </div>
+            <div class="form-grid" style="margin-top:12px">
+                <div class="form-group">
+                    <label class="form-label">Category <span class="required">*</span></label>
+                    <select class="form-select" id="f-category">
+                        <option value="">Select category</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Brand <span class="required">*</span></label>
+                    <select class="form-select" id="f-brand">
+                        <option value="">Select brand</option>
+                        {% for brand in brands %}
+                        <option value="{{ brand.id }}">{{ brand.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-grid full" style="margin-top:12px">
+                <div class="form-group">
+                    <label class="form-label">Occasion</label>
+<select class="form-select" id="f-occasion" multiple>
+    {% for occ in occasions %}
+        <option value="{{ occ.id }}">{{ occ.name }}</option>
+    {% endfor %}
+</select>
+                </div>
+            </div>
+            <div class="toggle-row" style="margin-top:8px">
+                <label class="toggle-item">
+                    <input type="checkbox" id="f-is-active" checked>
+                    <span class="toggle-label">Is Active</span>
+                </label>
+                <label class="toggle-item">
+                    <input type="checkbox" id="f-is-featured">
+                    <span class="toggle-label">Is Featured</span>
+                </label>
+            </div>
+
+            <!-- Product Variants -->
+            <div class="section-title" style="margin-top:20px">
+                <div class="variants-header">
+                    <span>Product Variants <span class="required">*</span></span>
+                    <button class="btn-add-variant" type="button" onclick="addVariant()">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Add Variant
+                    </button>
+                </div>
+            </div>
+
+            <div id="variantsContainer"></div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn btn-ghost" id="cancelAddBtn">Cancel</button>
+            <button type="button" class="btn btn-primary" id="submitProductBtn">
+    Add Product
+</button>
+        </div>
+    </div>
+</div>
+
+
+<div class="modal-overlay" id="confirmOverlay">
+    <div class="confirm-modal">
+        <div class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        </div>
+        <h4>Soft Delete Product</h4>
+        <p>Are you sure you want to deactivate <strong id="deleteProductName"></strong>?</p>
+        <div class="confirm-note">
+            ⚠️ This is a soft delete — the product will be hidden but not permanently removed. You can restore it from Deleted Products.
+        </div>
+        <div class="btn-row">
+            <button class="btn btn-ghost" onclick="closeConfirm()">Cancel</button>
+            <button class="btn btn-primary" id="confirmDeleteBtn">Deactivate</button>
+        </div>
+    </div>
+</div>
+
+
+<div class="toast" id="toast">
+    <svg class="t-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+    <span id="toastMsg">Done</span>
+</div>
+<div class="modal-overlay" id="cropOverlay">
+    <div class="modal" style="max-width:500px;">
+        <div class="modal-header">
+            <h3>Crop Image</h3>
+        </div>
+        <div class="modal-body">
+            <img id="cropImage" style="max-width:100%;">
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeCrop()">Cancel</button>
+            <button class="btn btn-primary" id="cropBtn">Crop</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+
+
+<script>
+
+function getCSRFToken() {
+    const cookieValue = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken='))
+        ?.split('=')[1];
+    return cookieValue;
+}
+
+let occasionSelect;
+
+document.addEventListener('DOMContentLoaded', function() {
+
+    occasionSelect = new TomSelect("#f-occasion", {
+        plugins: ['remove_button'],
+        create: false,
+        persist: false
+    });
+
+});
+const CSRF = '{{ csrf_token }}';
+let variantCount = 0;
+let editingProductId = null;
+
+let cropper;
+let currentInput;
+let currentVariantId;
+const variantImageCounts = {};
+const variantFiles = {};
+
+
+const addOverlay = document.getElementById('addModalOverlay');
+const confirmOverlay = document.getElementById('confirmOverlay');
+
+document.getElementById('openAddModal').addEventListener('click', () => {
+    editingProductId = null;
+    document.getElementById('modalTitle').textContent = 'Add New Product';
+    document.getElementById('submitProductBtn').textContent = 'Add Product';
+    resetForm();
+    addVariant();
+    addOverlay.classList.add('open');
+});
+
+document.getElementById('closeAddModal').addEventListener('click', () => addOverlay.classList.remove('open'));
+document.getElementById('cancelAddBtn').addEventListener('click', () => addOverlay.classList.remove('open'));
+
+addOverlay.addEventListener('click', (e) => { if (e.target === addOverlay) addOverlay.classList.remove('open'); });
+
+function resetForm() {
+    document.getElementById('f-name').value = '';
+    document.getElementById('f-description').value = '';
+    document.getElementById('f-category').value = '';
+    document.getElementById('f-brand').value = '';
+   if (occasionSelect) {
+    occasionSelect.clear();
+}
+    document.getElementById('f-is-active').checked = true;
+    document.getElementById('f-is-featured').checked = false;
+    document.getElementById('variantsContainer').innerHTML = '';
+    variantCount = 0;
+    Object.keys(variantImageCounts).forEach(k => delete variantImageCounts[k]);
+}
+
+function addVariant() {
+    variantCount++;
+    const n = variantCount;
+    const container = document.getElementById('variantsContainer');
+    const div = document.createElement('div');
+    div.className = 'variant-card';
+    div.id = `variant-${n}`;
+    div.innerHTML = `
+        <div class="variant-card-header">
+            <span class="variant-card-title">Variant #${n}</span>
+            <button class="btn-remove-variant" type="button" onclick="removeVariant(${n})">
+   Remove
+</button>
+        </div>
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label">Color <span class="required">*</span></label>
+                <select class="form-select v-color">
+    <option value="">Select Color</option>
+    <option value="black">Black</option>
+    <option value="white">White</option>
+    <option value="nude">Nude</option>
+    <option value="beige">Beige</option>
+    <option value="brown">Brown</option>
+    <option value="tan">Tan</option>
+    <option value="gold">Gold</option>
+    <option value="silver">Silver</option>
+    <option value="rose_gold">Rose Gold</option>
+    <option value="maroon">Maroon</option>
+    <option value="navy">Navy</option>
+    <option value="olive">Olive</option>
+    <option value="peach">Peach</option>
+</select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Size <span class="required">*</span></label>
+                <select class="form-select v-size">
+    <option value="">Select Size</option>
+    <option value="3">3</option>
+    <option value="4">4</option>
+    <option value="5">5</option>
+    <option value="6">6</option>
+    <option value="7">7</option>
+    <option value="8">8</option>
+    <option value="9">9</option>
+</select>
+
+            </div>
+            <div class="form-group">
+                <label class="form-label">Price <span class="required">*</span></label>
+                <input type="number" class="form-input v-price" placeholder='0.00' step='0.01'>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Sales Price</label>
+                <input type="number" class="form-input v-sales-price" placeholder='Optional' step='0.01'>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Stock <span class="required">*</span></label>
+                <input type="number" class="form-input v-stock" placeholder="0" min="0">
+            </div>
+        </div>
+        <div class="form-group" style="margin-top:12px">
+    <label class="form-label">
+  Variant Images 
+  <span class="required">*</span>
+  <span style="font-size:11px;color:var(--orange);font-weight:400">
+    (min. 3 required)
+  </span>
+</label>
+            <div class="image-upload-area">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="17 8 12 3 7 8"></polyline>
+        <line x1="12" y1="3" x2="12" y2="15"></line>
+    </svg>
+    <p>Click to upload images</p>
+    <span>SVG, PNG, JPG or GIF (max. 800x400px)</span>
+</div>
+            <input type='file' id="imgInput-${n}" style="display:none" multiple accept="image/*" onchange="previewImages(${n}, this)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
+                <span id="imgCount-${n}" style="font-size:11px;color:var(--text-dim)">0 images selected</span>
+                <span id="imgCountErr-${n}" style="font-size:11px;color:var(--red);display:none">⚠ At least 3 images required</span>
+            </div>
+            <div class="upload-preview" id="preview-${n}"></div>
+        </div>
+    `;
+    container.appendChild(div);
+    const uploadArea = div.querySelector('.image-upload-area');
+const fileInput = div.querySelector(`#imgInput-${n}`);
+
+uploadArea.addEventListener('click', function () {
+    fileInput.click();
+});
+}
+function removeVariant(n) {
+    const el = document.getElementById(`variant-${n}`);
+    if (el) {
+        el.remove();
+    }
+
+    delete variantImageCounts[n];
+    delete variantFiles[n];
+}
+function previewImages(n, input) {
+
+    const files = Array.from(input.files);
+    if (!files.length) return;
+
+    let index = 0;
+
+    function processNext() {
+        if (index >= files.length) return;
+
+        const file = files[index];
+        currentVariantId = n;
+
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+
+            const cropImg = document.getElementById('cropImage');
+            cropImg.src = e.target.result;
+            document.getElementById('cropOverlay').classList.add('open');
+
+            cropImg.onload = function () {
+
+                if (cropper) cropper.destroy();
+
+                cropper = new Cropper(cropImg, {
+                    aspectRatio: 1,
+                    viewMode: 1,
+                    autoCropArea: 1,
+                    responsive: true,
+                    background: false
+                });
+
+            }
+
+            // After cropping, continue next
+            document.getElementById('cropBtn').onclick = function () {
+
+                const canvas = cropper.getCroppedCanvas({
+                    width: 400,
+                    height: 400
+                });
+
+                canvas.toBlob(function(blob) {
+
+                    const croppedFile = new File(
+                        [blob],
+                        `cropped_${Date.now()}.png`,
+                        { type: "image/png" }
+                    );
+
+                    if (!variantFiles[n]) {
+                        variantFiles[n] = [];
+                    }
+
+                    variantFiles[n].push(croppedFile);
+
+                    const preview = document.getElementById(`preview-${n}`);
+                    const url = URL.createObjectURL(blob);
+
+                    const item = document.createElement('div');
+                    item.className = 'upload-preview-item';
+                    item.innerHTML = `
+                        <img src="${url}">
+                        <div class="remove-img"
+                            onclick="removePreviewImage(${n}, this.parentElement)">
+                            ×
+                        </div>
+                    `;
+
+                    preview.appendChild(item);
+
+                    variantImageCounts[n] =
+                        (variantImageCounts[n] || 0) + 1;
+
+                    updateImageCount(n);
+
+                    closeCrop();
+
+                    index++;
+                    processNext();
+
+                }, 'image/png');
+            };
+
+        };
+
+        reader.readAsDataURL(file);
+    }
+
+    processNext();
+}
+function removePreviewImage(n, item) {
+    item.remove();
+    variantImageCounts[n] = Math.max(0, (variantImageCounts[n] || 1) - 1);
+    updateImageCount(n);
+}
+
+function updateImageCount(n) {
+    const count = variantImageCounts[n] || 0;
+    const countEl = document.getElementById(`imgCount-${n}`);
+    const errEl = document.getElementById(`imgCountErr-${n}`);
+    if (countEl) countEl.textContent = `${count} image${count !== 1 ? 's' : ''} selected`;
+    if (errEl) errEl.style.display = count > 0 && count < 3 ? 'inline' : 'none';
+}
+
+// ── SUBMIT PRODUCT ──
+const submitBtn = document.getElementById('submitProductBtn');
+
+if (submitBtn) {
+    submitBtn.addEventListener('click', async () => {
+
+        console.log("SUBMIT BUTTON CLICKED");
+
+        const name = document.getElementById('f-name').value.trim();
+        const description = document.getElementById('f-description').value.trim();
+        const category = document.getElementById('f-category').value;
+        const brand = document.getElementById('f-brand').value;
+
+        if (!name || !category) {
+            showToast('Please fill in all required fields.', 'error');
+            return;
+        }
+
+
+    const variantCards = document.querySelectorAll('#variantsContainer .variant-card');
+    const variants = [];
+    let imageError = false;
+
+    for (const card of variantCards) {
+        const cardId = card.id.replace('variant-', '');
+        const imgCount = variantImageCounts[cardId] || 0;
+        if (imgCount < 3) {
+            imageError = true;
+            const errEl = document.getElementById(`imgCountErr-${cardId}`);
+            if (errEl) errEl.style.display = 'inline';
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        const color = card.querySelector('.v-color').value.trim();
+const size = card.querySelector('.v-size').value.trim();
+const price = parseFloat(card.querySelector('.v-price').value);
+const stock = parseInt(card.querySelector('.v-stock').value);
+
+if (!color || !size || !price || stock === null || stock === '') {
+    showToast('Please fill all variant required fields.', 'error');
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+}
+
+variants.push({
+    id: card.dataset.variantId || null,   // 👈 ADD THIS
+    color,
+    size,
+    price,
+    sales_price: parseFloat(card.querySelector('.v-sales-price').value) || null,
+    stock,
+    image_count: imgCount
+});
+    }
+
+    if (imageError) {
+        showToast('Each variant requires at least 3 images.', 'error');
+        return;
+    }
+
+    const payload = {
+        name,
+        description,
+        category,
+        brand,
+        occasion: document.getElementById('f-occasion').value.trim(),
+        is_active: document.getElementById('f-is-active').checked,
+        is_featured: document.getElementById('f-is-featured').checked,
+        variants,
+    };
+
+    const btn = document.getElementById('submitProductBtn');
+    btn.disabled = true;
+    btn.textContent = editingProductId ? 'Saving...' : 'Adding...';
+
+    try {
+        const url = editingProductId
+        ? `/admin-panel/product/${editingProductId}/edit/`
+        : '/admin-panel/product/add/';
+        console.log("FETCH IS ABOUT TO RUN");
+
+       
+const formData = new FormData();
+
+formData.append('name', name);
+formData.append('description', description);
+formData.append('category', category);
+formData.append('brand', brand);
+const selectedOccasions = occasionSelect.getValue();
+
+selectedOccasions.forEach(occ => {
+    formData.append('occasions', occ);
+});
+if (document.getElementById('f-is-active').checked) {
+    formData.append('is_active', 'on');
+}
+if (document.getElementById('f-is-featured').checked) {
+    formData.append('is_featured', 'on');
+}
+
+// variants JSON
+formData.append('variants', JSON.stringify(variants));
+
+variantCards.forEach(card => {
+    const id = card.id.replace('variant-', '');
+
+    if (variantFiles[id] && variantFiles[id].length > 0) {
+        variantFiles[id].forEach(file => {
+            formData.append(`variant_images_${id}`, file);
+        });
+    }
+});
+const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+        'X-CSRFToken': getCSRFToken()
+    },
+    body: formData
+});
+
+console.log("STATUS:", res.status);
+
+const text = await res.text();
+console.log("RAW RESPONSE:", text);
+
+if (!res.ok) {
+    const errText = await res.text();
+    console.log("SERVER ERROR:", errText);
+    showToast("Server error: " + errText, "error");
+    return;
+}
+
+const data = JSON.parse(text);
+
+if (data.success) {
+    showToast(data.message, 'success');
+    addOverlay.classList.remove('open');
+    setTimeout(() => location.reload(), 800);
+} else {
+    console.log("DJANGO ERRORS:", data);
+    showToast(JSON.stringify(data), 'error');
+}
+    } catch (e) {
+        showToast('Network error. Please try again.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = editingProductId ? 'Save Changes' : 'Add Product';
+    }
+});
+} 
+
+// ── EDIT ──
+async function openEditModal(id) {
+    try {
+        const res = await fetch(`/admin-panel/product/${id}/edit/`);
+        const data = await res.json();
+
+        editingProductId = id;
+        document.getElementById('modalTitle').textContent = 'Edit Product';
+        document.getElementById('submitProductBtn').textContent = 'Save Changes';
+
+        document.getElementById('f-name').value = data.name || '';
+        document.getElementById('f-description').value = data.description || '';
+        document.getElementById('f-category').value = data.category || '';
+        document.getElementById('f-brand').value = data.brand || '';
+        if (occasionSelect) {
+    occasionSelect.clear();
+
+    if (data.occasions && data.occasions.length > 0) {
+        occasionSelect.setValue(data.occasions);
+    }
+}
+        document.getElementById('f-is-active').checked = data.is_active;
+        document.getElementById('f-is-featured').checked = data.is_featured;
+
+        document.getElementById('variantsContainer').innerHTML = '';
+        variantCount = 0;
+        Object.keys(variantImageCounts).forEach(k => delete variantImageCounts[k]);
+
+        (data.variants || []).forEach(v => {
+    addVariant();
+    const card = document.querySelector(`#variant-${variantCount}`);
+
+    card.dataset.variantId = v.id;  
+
+    card.querySelector('.v-color').value = v.color || '';
+    card.querySelector('.v-size').value = v.size || '';
+    card.querySelector('.v-price').value = v.price || '';
+    card.querySelector('.v-sales-price').value = v.sales_price || '';
+    card.querySelector('.v-stock').value = v.stock || 0;
+
+if (v.images && v.images.length > 0) {
+
+    const preview = document.getElementById(`preview-${variantCount}`);
+
+  
+    variantImageCounts[variantCount] = 0;
+
+    v.images.forEach(img => {
+
+        const item = document.createElement('div');
+        item.className = 'upload-preview-item';
+
+        item.innerHTML = `
+            <img src="${img.url}" style="width:100%;height:100%;object-fit:cover;">
+            <div class="remove-img"
+                onclick="removePreviewImage(${variantCount}, this.parentElement)">
+                ×
+            </div>
+        `;
+
+        preview.appendChild(item);
+
+        variantImageCounts[variantCount] += 1;
+    });
+
+    updateImageCount(variantCount);
+}
+});
+
+        if ((data.variants || []).length === 0) addVariant();
+
+        addOverlay.classList.add('open');
+    } catch (e) {
+        showToast('Failed to load product.', 'error');
+    }
+}
+
+// ── TOGGLE STATUS ──
+async function toggleStatus(id, btn) {
+    try {
+        const res = await fetch(`/admin-panel/product/${id}/toggle-status/`, {
+            method: 'POST',
+           headers: {
+    'X-CSRFToken': getCSRFToken()
+},
+        });
+        const data = await res.json();
+        if (data.success) {
+            const statusEl = document.getElementById(`status-${id}`);
+            if (data.is_active) {
+                statusEl.textContent = 'Active';
+                statusEl.className = 'status-badge active';
+            } else {
+                statusEl.textContent = 'Inactive';
+                statusEl.className = 'status-badge inactive';
+            }
+            showToast(data.message, 'success');
+        }
+    } catch (e) {
+        showToast('Failed to toggle status.', 'error');
+    }
+}
+
+// ── SOFT DELETE ──
+let deleteTargetId = null;
+
+function confirmDelete(id, name) {
+    deleteTargetId = id;
+    document.getElementById('deleteProductName').textContent = name;
+    confirmOverlay.classList.add('open');
+}
+
+function closeConfirm() {
+    confirmOverlay.classList.remove('open');
+    deleteTargetId = null;
+}
+
+document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
+    if (!deleteTargetId) return;
+    try {
+        const res = await fetch(`/admin-panel/product/${deleteTargetId}/soft-delete/`, {
+            method: 'POST',
+            headers: {
+    'X-CSRFToken': getCSRFToken()
+},
+        });
+        const data = await res.json();
+        if (data.success) {
+            const row = document.querySelector(`tr[data-id="${deleteTargetId}"]`);
+            if (row) row.style.opacity = '0';
+            
+            showToast(data.message, 'success');
+        }
+    } catch (e) {
+        showToast('Failed to delete product.', 'error');
+    } finally {
+        closeConfirm();
+    }
+});
+
+confirmOverlay.addEventListener('click', (e) => { if (e.target === confirmOverlay) closeConfirm(); });
+
+// ── SEARCH ──
+const searchInput = document.getElementById('searchInput');
+const searchCancel = document.getElementById('searchCancel');
+let searchTimer;
+
+function buildUrl(params = {}) {
+    const url = new URL(window.location.href);
+    Object.entries(params).forEach(([k, v]) => {
+        if (v !== null && v !== undefined && v !== '') url.searchParams.set(k, v);
+        else url.searchParams.delete(k);
+    });
+    return url.toString();
+}
+if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+        const q = e.target.value.trim();
+        searchCancel.classList.toggle('visible', q.length > 0);
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+            window.location.href = buildUrl({ q: q || null, page: null });
+        }, 400);
+    });
+}
+searchCancel.addEventListener('click', () => {
+    searchInput.value = '';
+    searchCancel.classList.remove('visible');
+    searchInput.focus();
+    window.location.href = buildUrl({ q: null, page: null });
+});
+
+// ── PER PAGE ──
+document.getElementById('perPageSelect').addEventListener('change', (e) => {
+    window.location.href = buildUrl({ per_page: e.target.value, page: null });
+});
+
+// ── RESTORE ──
+async function restoreProduct(id, btn) {
+    btn.disabled = true;
+    try {
+        const res = await fetch(`/admin-panel/product/${id}/restore/`, {
+            method: 'POST',
+           headers: {
+    'X-CSRFToken': getCSRFToken()
+},
+        });
+        const data = await res.json();
+        if (data.success) {
+            const row = document.querySelector(`tr[data-id="${id}"]`);
+            if (row) { row.style.transition = 'opacity 0.3s'; row.style.opacity = '0'; setTimeout(() => row.remove(), 300); }
+            showToast(data.message, 'success');
+        }
+    } catch (e) {
+        showToast('Failed to restore product.', 'error');
+        btn.disabled = false;
+    }
+}
+
+// ── TOAST ──
+function showToast(msg, type = 'success') {
+    const toast = document.getElementById('toast');
+    const icon = toast.querySelector('.t-icon');
+    document.getElementById('toastMsg').textContent = msg;
+    toast.className = `toast ${type}`;
+
+    if (type === 'success') {
+        icon.innerHTML = '<polyline points="20 6 9 17 4 12"/>';
+    } else {
+        icon.innerHTML = '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>';
+    }
+
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3200);
+}
+function closeCrop() {
+    document.getElementById('cropOverlay').classList.remove('open');
+    if (cropper) {
+        cropper.destroy();
+        cropper = null;
+    }
+}
+
+// Make functions global for inline HTML calls
+window.previewImages = previewImages;
+window.removePreviewImage = removePreviewImage;
+window.addVariant = addVariant;
+window.removeVariant = removeVariant;
+window.confirmDelete = confirmDelete;
+window.restoreProduct = restoreProduct;
+window.toggleStatus = toggleStatus;
+window.openEditModal = openEditModal;
+
+</script>
+{% endblock %}

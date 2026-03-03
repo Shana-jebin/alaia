@@ -1,0 +1,324 @@
+{% extends 'adminpanel/base_admin.html' %}
+{% load static %}
+{% block title %}
+  Brand Management
+{% endblock %}
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'adminpanel/brand.css' %}" />
+{% endblock %}
+
+{% block content %}
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <h1>Brands</h1>
+    <button onclick="openAddModal()" class="btn-add"><span>+</span> Add Brand</button>
+  </div>
+
+  <!-- Search Form -->
+  <form method="GET" action="{% url 'brand_list' %}" id="search-form">
+    <input type="hidden" name="page" value="{{ brands.number }}">
+    <div class="search-wrapper">
+      <div class="search-input-wrap">
+        <input type="text" name="q" id="search-input" class="search-input" placeholder="Search brand..." value="{{ query|default:'' }}" autocomplete="off" />
+        <button type="button" class="clear-btn" id="clear-btn" title="Clear">✕</button>
+      </div>
+    </div>
+  </form>
+
+  <script>
+    const input = document.getElementById('search-input')
+    const clearBtn = document.getElementById('clear-btn')
+    const form = document.getElementById('search-form')
+    
+    function toggleClear() {
+      clearBtn.style.display = input.value ? 'block' : 'none'
+    }
+    
+ 
+    
+    clearBtn.addEventListener('click', () => {
+      input.value = ''
+      toggleClear()
+      form.submit()
+    })
+    
+    toggleClear() // on load
+  </script>
+
+  <!-- Table -->
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Logo</th>
+          <th>Brand Name</th>
+          <th>Products</th>
+          <th>Rating</th>
+          <th style="text-align:right; padding-right: 30px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for brand in brands %}
+          <tr>
+            <td>
+              {% if brand.logo %}
+                <img src="{{ brand.logo.url }}" alt="{{ brand.name }}" style="width:38px;height:38px;border-radius:6px;object-fit:cover;" />
+              {% else %}
+                <div class="logo-avatar">{{ brand.name|slice:':2'|upper }}</div>
+              {% endif %}
+            </td>
+            <td>
+              <span class="brand-name">{{ brand.name }}</span>
+            </td>
+            <td>{{ brand.product_count }} items</td>
+            <td>{{ brand.rating }}</td>
+            <td style="text-align:right;">
+              <button class="action-btn"
+onclick="openEditModal('{{ brand.id }}','{{ brand.name }}','{{ brand.rating }}','{% url 'brand_edit' brand.id %}')">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+              </button>
+              <a href="{% url 'brand_delete' brand.pk %}" class="action-btn delete" title="Delete" onclick="return confirm('Delete {{ brand.name }}?')">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                  <path d="M10 11v6" />
+                  <path d="M14 11v6" />
+                  <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                </svg>
+              </a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="5">
+              <div class="no-results">No brands found.</div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if brands.has_other_pages %}
+    <div class="pagination-wrapper">
+      <!-- Prev -->
+      {% if brands.has_previous %}
+        <a href="?{% if query %}
+            
+            
+            
+              q={{ query }}&
+
+
+
+          {% endif %}page={{ brands.previous_page_number }}"
+          class="page-btn nav">
+          &#8249;
+        </a>
+      {% else %}
+        <span class="page-btn nav" style="opacity:0.3; cursor:not-allowed;">&#8249;</span>
+      {% endif %}
+
+      <!-- Page Numbers -->
+      {% for num in brands.paginator.page_range %}
+        {% if brands.number == num %}
+          <span class="page-btn active">{{ num }}</span>
+        {% elif num == brands.paginator.num_pages or num == 1 or num >= brands.number|add:'-2' and num <= brands.number|add:'2' %}
+          <a href="?{% if query %}
+              
+              
+              
+                q={{ query }}&
+
+
+
+            {% endif %}page={{ num }}"
+            class="page-btn">
+            {{ num }}
+          </a>
+        {% elif num == brands.number|add:'-3' or num == brands.number|add:'3' %}
+          <span class="page-btn dots">…</span>
+        {% endif %}
+      {% endfor %}
+
+      <!-- Next -->
+      {% if brands.has_next %}
+        <a href="?{% if query %}
+            
+            
+            
+              q={{ query }}&
+
+
+
+          {% endif %}page={{ brands.next_page_number }}"
+          class="page-btn nav">
+          &#8250;
+        </a>
+      {% else %}
+        <span class="page-btn nav" style="opacity:0.3; cursor:not-allowed;">&#8250;</span>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <div style="margin-top:40px;">
+    <button onclick="toggleTrash()" class="btn-add" style="background:#444;">Show Inactive Brands</button>
+  </div>
+
+  <div id="trash-section" style="display:none; margin-top:15px;">
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Logo</th>
+            <th>Brand Name</th>
+            <th>Products</th>
+            <th>Rating</th>
+            <th style="text-align:right; padding-right: 30px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for brand in inactive_brands %}
+            <tr>
+              <td>
+                {% if brand.logo %}
+                  <img src="{{ brand.logo.url }}" style="width:38px;height:38px;border-radius:6px;object-fit:cover;" />
+                {% else %}
+                  <div class="logo-avatar">{{ brand.name|slice:':2'|upper }}</div>
+                {% endif %}
+              </td>
+              <td>
+                <span class="brand-name">{{ brand.name }}</span>
+              </td>
+              <td>{{ brand.product_count }} items</td>
+              <td>{{ brand.rating }}</td>
+              <td style="text-align:right;">
+                <a href="{% url 'brand_restore' brand.pk %}" class="action-btn" title="Restore">Restore</a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="5">
+                <div class="no-results">No inactive brands.</div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div id="editBrandModal" class="modal-overlay">
+  <div class="modal-box">
+
+    <h3>Edit Brand</h3>
+
+    <form id="editBrandForm" method="POST" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <input type="hidden" name="brand_id" id="edit_brand_id">
+
+      <input type="text" name="name" id="edit_brand_name" placeholder="Brand Name" required>
+
+      <input type="number" step="0.1" name="rating" id="edit_brand_rating" placeholder="Rating (0-5)">
+
+      <input type="file" name="logo">
+
+      <button type="submit" class="modal-save">Update</button>
+      <button type="button" onclick="closeEditModal()" class="modal-cancel">Cancel</button>
+
+    </form>
+
+  </div>
+</div>
+<div id="addBrandModal" class="modal-overlay">
+  <div class="modal-box">
+
+    <h3>Add Brand</h3>
+
+    <form method="POST" enctype="multipart/form-data" action="{% url 'brand_create' %}">
+      {% csrf_token %}
+
+      <input type="text" name="name" placeholder="Brand Name" required>
+
+      <input type="number" step="0.1" name="rating" placeholder="Rating (0-5)">
+
+      <input type="file" name="logo">
+
+      <button type="submit" class="modal-save">Save</button>
+      <button type="button" onclick="closeAddModal()" class="modal-cancel">Cancel</button>
+
+    </form>
+
+  </div>
+</div>
+
+{% endblock %}
+{% block extra_js %}
+
+<script>
+
+let timer;
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    let input = document.getElementById('search-input');
+    let form = document.getElementById('search-form');
+
+    if(input){
+        input.addEventListener('input', () => {
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+                form.submit();
+            }, 700);
+        });
+    }
+
+});
+
+function toggleTrash() {
+  let trash = document.getElementById('trash-section')
+  if (trash.style.display === 'none') {
+    trash.style.display = 'block'
+  } else {
+    trash.style.display = 'none'
+  }
+}
+
+function openEditModal(id, name, rating, url) {
+  document.getElementById('editBrandModal').style.display = 'flex'
+
+  document.getElementById('edit_brand_id').value = id
+  document.getElementById('edit_brand_name').value = name
+  document.getElementById('edit_brand_rating').value = rating
+
+  document.getElementById("editBrandForm").action = url;
+}
+
+function closeEditModal() {
+  document.getElementById('editBrandModal').style.display = 'none'
+}
+
+function openAddModal() {
+  document.getElementById('addBrandModal').style.display = 'flex'
+}
+
+function closeAddModal() {
+  document.getElementById('addBrandModal').style.display = 'none'
+}
+
+setTimeout(function(){
+    let msg = document.getElementById("alert-message");
+    if(msg){
+        msg.style.display = "none";
+    }
+},3000);
+
+window.history.replaceState({}, document.title, window.location.pathname);
+
+</script>
+{% endblock %}
+

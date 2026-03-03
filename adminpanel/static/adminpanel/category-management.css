@@ -51,9 +51,15 @@ body {
     width: 16px;
     height: 16px;
 }
+.search-wrapper {
+    position: relative;
+    width: 100%;
+}
+
 
 .search-bar {
     width: 100%;
+    padding-right: 40px;
     background-color: #1a1a1a;
     border: 1px solid #2a2a2a;
     border-radius: 8px;
@@ -177,23 +183,21 @@ td {
     align-items: center;
     justify-content: center;
 }
-
-.btn-edit {
-    color: #888888;
+.btn-icon svg {
+    transition: 0.2s ease;
 }
 
-.btn-edit:hover {
-    background-color: #1a1a1a;
-    color: #ffffff;
+.btn-edit:hover svg {
+    color: #4CAF50;
+    transform: scale(1.1);
 }
 
-.btn-delete {
-    color: #dc2626;
+.btn-delete:hover svg {
+    color: #e53935;
+    transform: scale(1.1);
 }
 
-.btn-delete:hover {
-    background-color: rgba(220, 38, 38, 0.1);
-}
+
 
 .btn-icon svg {
     width: 18px;
@@ -209,7 +213,7 @@ td {
     right: 0;
     bottom: 0;
     background-color: rgba(0, 0, 0, 0.75);
-    z-index: 1000;
+     z-index: 99999;
     align-items: center;
     justify-content: center;
 }
@@ -267,6 +271,22 @@ td {
     justify-content: center;
     transition: color 0.2s ease;
 }
+.clear-btn {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    text-decoration: none;
+    color: #aaa;
+    font-size: 14px;
+    cursor: pointer;
+    background: transparent;
+}
+
+.clear-btn:hover {
+    color: #ff4d4f;
+}
+
 
 .btn-close:hover {
     color: #ffffff;
@@ -430,3 +450,70 @@ select.form-control option {
     margin: 0;
     line-height: 1.5;
 }
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 30px;
+    gap: 8px;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+.pagination-btn {
+    background-color: transparent;
+    border: 1px solid #2a2a2a;
+    color: #888888;
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    font-weight: 500;
+    
+    user-select: none;
+
+
+}
+
+.pagination-container a.pagination-btn {
+    text-decoration: none;
+    cursor: pointer;
+}
+
+
+.pagination-container a.pagination-btn:hover {
+    background-color: #1a1a1a;
+    border-color: #3a3a3a;
+    color: #ffffff;
+}
+
+.pagination-btn.active {
+    background-color: #dc2626;
+    border-color: #dc2626;
+    color: #ffffff;
+}
+
+.pagination-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+.pagination-btn,
+.pagination-btn * {
+    cursor: pointer !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+}
+.pagination-container a {
+    text-decoration: none;
+    cursor: pointer;
+}
+
