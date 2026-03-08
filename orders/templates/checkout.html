@@ -1,0 +1,250 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Checkout — ALAIA{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+{% endblock %}
+
+{% block content %}
+<div class="co-wrap">
+
+  <!-- LEFT: Form -->
+  <div class="co-left">
+    <h1 class="co-title">Checkout</h1>
+
+    <form method="POST" action="{% url 'orders:place_order' %}" id="checkoutForm">
+      {% csrf_token %}
+      <input type="hidden" name="coupon_code" id="appliedCouponCode">
+
+      <!-- 1. Delivery Address -->
+      <div class="section-block">
+        <div class="section-label">Delivery Address</div>
+
+        {% if addresses %}
+        <div class="addr-grid">
+          {% for addr in addresses %}
+          <label class="addr-card {% if addr == default_address %}selected{% endif %}" id="addr-label-{{ addr.id }}">
+            <input type="radio" name="address_id" value="{{ addr.id }}"
+                   {% if addr == default_address %}checked{% endif %}
+                   onchange="selectAddr({{ addr.id }})">
+            <div class="addr-top">
+              <div class="addr-name">{{ addr.full_name }}</div>
+              {% if addr.is_default %}<span class="addr-default-badge">Default</span>{% endif %}
+            </div>
+            <div class="addr-text">
+              {{ addr.address_line1 }}{% if addr.address_line2 %}, {{ addr.address_line2 }}{% endif %}<br>
+              {{ addr.city }}, {{ addr.state }} — {{ addr.postal_code }}<br>
+              {{ addr.country }} · {{ addr.phone }}
+            </div>
+            <div class="addr-check"></div>
+          </label>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div style="font-family:'Montserrat',sans-serif;font-size:12px;color:var(--muted);margin-bottom:12px;">
+          No saved addresses. Please add one to continue.
+        </div>
+        {% endif %}
+
+        <a href="{% url 'add_address' %}?next={% url 'orders:checkout' %}" class="btn-add-addr">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Add New Address
+        </a>
+      </div>
+
+      <!-- 2. Payment Method -->
+      <div class="section-block">
+        <div class="section-label">Payment Method</div>
+        <div class="pay-grid">
+          <label class="pay-option selected" id="pay-cod" onclick="selectPay('cod')">
+            <input type="radio" name="payment_method" value="cod" checked>
+            <div class="pay-dot"></div>
+            <div class="pay-info">
+              <div class="pay-label">Cash on Delivery</div>
+              <div class="pay-sub">Pay when your order arrives</div>
+            </div>
+            <svg width="28" height="18" viewBox="0 0 28 18" fill="none">
+              <rect width="28" height="18" rx="2" fill="#f5f0e8"/>
+              <circle cx="11" cy="9" r="5" fill="#c9a96e" opacity=".6"/>
+              <circle cx="17" cy="9" r="5" fill="#c9a96e" opacity=".9"/>
+            </svg>
+          </label>
+          <label class="pay-option" id="pay-online" onclick="selectPay('online')"
+                 style="opacity:.45;pointer-events:none;" title="Coming soon">
+            <input type="radio" name="payment_method" value="online" disabled>
+            <div class="pay-dot"></div>
+            <div class="pay-info">
+              <div class="pay-label">Online Payment <span style="font-size:9px;color:var(--muted);">(Coming Soon)</span></div>
+              <div class="pay-sub">Cards, UPI, Net Banking</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- 3. Coupon -->
+      <div class="section-block">
+        <div class="section-label">Promo Code</div>
+        <div class="coupon-wrap">
+          <input type="text" class="coupon-input" id="couponInput" placeholder="Enter coupon code"
+                 oninput="this.value=this.value.toUpperCase()">
+          <button type="button" class="coupon-btn" onclick="applyCoupon()">Apply</button>
+        </div>
+        <div class="coupon-msg" id="couponMsg"></div>
+
+        {% if coupons %}
+        <div class="coupon-pills">
+          {% for c in coupons %}
+          <div class="coupon-pill" onclick="useCoupon('{{ c.code }}')">
+            {{ c.code }} ·
+            {% if c.discount_type == 'percent' %}{{ c.discount_value|floatformat:0 }}% off
+            {% else %}₹{{ c.discount_value|floatformat:0 }} off{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+    </form>
+  </div>
+
+  <!-- RIGHT: Summary -->
+  <div class="co-summary">
+    <div class="co-sum-title">Order Summary</div>
+
+    <div class="co-items">
+      {% for item in items %}
+      <div class="co-item">
+        <div class="co-item-img">
+          {% if item.variant.images.first %}
+            <img src="{{ item.variant.images.first.image.url }}" alt="{{ item.variant.product.name }}">
+          {% endif %}
+        </div>
+        <div class="co-item-info">
+          <div class="co-item-name">{{ item.variant.product.name }}</div>
+          <div class="co-item-meta">{{ item.variant.color|title }} / {{ item.variant.size }} · Qty {{ item.quantity }}</div>
+        </div>
+        <div class="co-item-price">₹{{ item.variant.final_price|floatformat:0 }}</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="sum-row"><span>Subtotal</span><span>₹{{ subtotal|floatformat:0 }}</span></div>
+    <div class="sum-row" id="discountRow" style="display:none;">
+      <span id="discountLabel">Discount</span>
+      <span id="discountAmt" style="color:#27ae60;"></span>
+    </div>
+    <div class="sum-row">
+      <span>Shipping</span>
+      <span>{% if shipping == 0 %}Free{% else %}₹{{ shipping }}{% endif %}</span>
+    </div>
+    <div class="sum-row total">
+      <span>Total</span>
+      <span id="grandTotal">₹{{ total|floatformat:0 }}</span>
+    </div>
+
+    <button type="submit" form="checkoutForm" class="btn-place" id="placeBtn"
+            {% if not addresses %}disabled{% endif %}>
+      {% if not addresses %}Add Address First{% else %}Place Order{% endif %}
+    </button>
+
+    <div class="secure-note">
+      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+      Secure &amp; encrypted checkout
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = () => document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+const SUBTOTAL = {{ subtotal }};
+const SHIPPING = {{ shipping }};
+let appliedDiscount = 0;
+let appliedCode = '';
+
+function selectAddr(id) {
+  document.querySelectorAll('.addr-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('addr-label-' + id).classList.add('selected');
+}
+
+function selectPay(val) {
+  document.querySelectorAll('.pay-option').forEach(p => p.classList.remove('selected'));
+  document.getElementById('pay-' + val).classList.add('selected');
+}
+
+function useCoupon(code) {
+  document.getElementById('couponInput').value = code;
+  applyCoupon();
+}
+
+function applyCoupon() {
+  const code = document.getElementById('couponInput').value.trim().toUpperCase();
+  const msg = document.getElementById('couponMsg');
+  if (!code) { msg.textContent = 'Please enter a coupon code.'; msg.className = 'coupon-msg err'; return; }
+
+  fetch("{% url 'orders:apply_coupon' %}", {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF() },
+    body: JSON.stringify({ code, subtotal: SUBTOTAL })
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      appliedDiscount = d.discount;
+      appliedCode = d.code;
+      document.getElementById('appliedCouponCode').value = appliedCode;
+      msg.textContent = d.message;
+      msg.className = 'coupon-msg ok';
+      updateTotals();
+    } else {
+      appliedDiscount = 0;
+      appliedCode = '';
+      document.getElementById('appliedCouponCode').value = '';
+      msg.textContent = d.error;
+      msg.className = 'coupon-msg err';
+      updateTotals();
+    }
+  })
+  .catch(() => { msg.textContent = 'Something went wrong.'; msg.className = 'coupon-msg err'; });
+}
+
+function updateTotals() {
+  const discRow = document.getElementById('discountRow');
+  const discAmt = document.getElementById('discountAmt');
+  const discLabel = document.getElementById('discountLabel');
+  const grandTotal = document.getElementById('grandTotal');
+
+  if (appliedDiscount > 0) {
+    discRow.style.display = 'flex';
+    discLabel.textContent = `Discount (${appliedCode})`;
+    discAmt.textContent = `- ₹${appliedDiscount.toFixed(0)}`;
+    grandTotal.textContent = `₹${(SUBTOTAL + SHIPPING - appliedDiscount).toFixed(0)}`;
+  } else {
+    discRow.style.display = 'none';
+    grandTotal.textContent = `₹${(SUBTOTAL + SHIPPING).toFixed(0)}`;
+  }
+}
+
+// Confirm before place order
+document.getElementById('checkoutForm').addEventListener('submit', function(e) {
+  const addrSelected = document.querySelector('input[name=address_id]:checked');
+  if (!addrSelected) {
+    e.preventDefault();
+    alert('Please select a delivery address.');
+    return;
+  }
+  const btn = document.getElementById('placeBtn');
+  btn.disabled = true;
+  btn.textContent = 'Placing Order...';
+});
+</script>
+{% endblock %}

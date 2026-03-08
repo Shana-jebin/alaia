@@ -302,7 +302,9 @@ def admin_category_delete(request, category_id):
 
 
 
-
+@never_cache
+@login_required
+@user_passes_test(is_admin, login_url='admin_login')
 def product_list(request):
     
     search_query = request.GET.get('q', '')
@@ -359,6 +361,9 @@ def product_list(request):
     }
     return render(request, 'adminpanel/product_list.html', context)
 
+@never_cache
+@login_required
+@user_passes_test(is_admin, login_url='admin_login')
 @require_POST
 def product_add(request):
 
@@ -430,6 +435,11 @@ def product_add(request):
         'product_id': product.id,
         'message': 'Product added successfully!'
     })
+
+
+@never_cache
+@login_required
+@user_passes_test(is_admin, login_url='admin_login')
 def product_edit(request, pk):
     product = get_object_or_404(Product, pk=pk, is_deleted=False)
 
@@ -443,7 +453,6 @@ def product_edit(request, pk):
                 'errors': product_form.errors
             }, status=400)
 
-        # ✅ Correct save (NO commit=False)
         product = product_form.save()
 
         variants_json = request.POST.get('variants')
@@ -485,13 +494,13 @@ def product_edit(request, pk):
 
                 variant.save()
 
-                # ----- HANDLE NEW IMAGES DURING EDIT -----
+        
                 index = variants_data.index(variant_data) + 1
                 image_key = f'variant_images_{index}'
                 images = request.FILES.getlist(image_key)
 
                 if images:
-                    # Remove old images if new ones uploaded
+                  
                     variant.images.all().delete()
 
                     for img in images:
@@ -537,12 +546,18 @@ def product_edit(request, pk):
         'is_featured': product.is_featured,
         'variants': variants,
     })
+@never_cache
+@login_required
+@user_passes_test(is_admin, login_url='admin_login')
 @require_POST
 def product_soft_delete(request, pk):
     product = get_object_or_404(Product, pk=pk, is_deleted=False)
     product.soft_delete()
     return JsonResponse({'success': True, 'message': f'"{product.name}" has been deactivated (soft deleted).'})
 
+@never_cache
+@login_required
+@user_passes_test(is_admin, login_url='admin_login')
 @require_POST
 def restore_product(request, pk):
     try:
@@ -584,10 +599,9 @@ def product_upload_image(request):
     return JsonResponse({'success': False, 'message': 'No image provided'}, status=400)
 
 
-
-
-
-
+@never_cache
+@login_required
+@user_passes_test(is_admin, login_url='admin_login')
 def brand_list(request):
 
     query = request.GET.get('q','').strip()
@@ -612,7 +626,9 @@ def brand_list(request):
     })
 
 
-
+@never_cache
+@login_required
+@user_passes_test(is_admin, login_url='admin_login')
 def brand_create(request):
     if request.method == 'POST':
         name = request.POST.get('name')
@@ -652,7 +668,9 @@ def brand_create(request):
     return render(request, 'adminpanel/brand-management.html')
 
 
-
+@never_cache
+@login_required
+@user_passes_test(is_admin, login_url='admin_login')
 def brand_edit(request, pk):
     brand = get_object_or_404(Brand, pk=pk)
     if request.method == 'POST':
@@ -696,16 +714,225 @@ def brand_edit(request, pk):
         'brand': brand
     })
 
-
+@never_cache
+@login_required
+@user_passes_test(is_admin, login_url='admin_login')
 def brand_delete(request, pk):
     brand = get_object_or_404(Brand, pk=pk)
     brand.is_active = False
     brand.save()
     return redirect('brand_list')
 
-
+@never_cache
+@login_required
+@user_passes_test(is_admin, login_url='admin_login')
 def brand_restore(request, pk):
     brand = get_object_or_404(Brand, pk=pk)
     brand.is_active = True
     brand.save()
     return redirect('brand_list')
+
+
+
+# ADD THESE IMPORTS AND VIEWS TO YOUR adminpanel/views.py
+
+from orders.models import Order, OrderItem
+from django.db.models import Q, Sum, Count
+from django.db.models.functions import TruncDate
+
+
+@never_cache
+@login_required
+@user_passes_test(is_admin, login_url='admin_login')
+def admin_order_list(request):
+    orders = Order.objects.select_related('user').prefetch_related('items')
+
+    q = request.GET.get('q', '').strip()
+    if q:
+        orders = orders.filter(
+            Q(order_id__icontains=q) |
+            Q(user__email__icontains=q) |
+            Q(user__first_name__icontains=q) |
+            Q(user__last_name__icontains=q) |
+            Q(full_name__icontains=q) |
+            Q(items__product_name__icontains=q)
+        ).distinct()
+
+    status_filter = request.GET.get('status', '')
+    if status_filter:
+        orders = orders.filter(status=status_filter)
+
+    date_from = request.GET.get('date_from', '')
+    if date_from:
+        try:
+            from datetime import datetime
+            orders = orders.filter(created_at__date__gte=datetime.strptime(date_from, '%Y-%m-%d').date())
+        except ValueError:
+            pass
+
+    date_to = request.GET.get('date_to', '')
+    if date_to:
+        try:
+            from datetime import datetime
+            orders = orders.filter(created_at__date__lte=datetime.strptime(date_to, '%Y-%m-%d').date())
+        except ValueError:
+            pass
+
+    sort = request.GET.get('sort', '-created_at')
+    allowed_sorts = ['created_at', '-created_at', 'total', '-total', 'status']
+    if sort in allowed_sorts:
+        orders = orders.order_by(sort)
+    else:
+        orders = orders.order_by('-created_at')
+
+    paginator = Paginator(orders, 20)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+
+    # Stats
+    all_orders = Order.objects.all()
+    stats = {
+        'total':     all_orders.count(),
+        'pending':   all_orders.filter(status='pending').count(),
+        'shipped':   all_orders.filter(status='shipped').count(),
+        'delivered': all_orders.filter(status='delivered').count(),
+        'cancelled': all_orders.filter(status='cancelled').count(),
+        'revenue':   all_orders.filter(status='delivered').aggregate(t=Sum('total'))['t'] or 0,
+    }
+
+    return render(request, 'adminpanel/order_list.html', {
+        'page_obj': page_obj,
+        'q': q,
+        'status_filter': status_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+        'sort': sort,
+        'stats': stats,
+        'status_choices': Order.STATUS_CHOICES,
+    })
+
+
+@never_cache
+@login_required
+@user_passes_test(is_admin, login_url='admin_login')
+def admin_order_detail(request, order_id):
+    order = get_object_or_404(Order, order_id=order_id)
+    return render(request, 'adminpanel/order_detail.html', {
+        'order': order,
+        'status_choices': Order.STATUS_CHOICES,
+    })
+
+
+@never_cache
+@login_required
+@user_passes_test(is_admin, login_url='admin_login')
+@require_POST
+def admin_order_status(request, order_id):
+    order = get_object_or_404(Order, order_id=order_id)
+    try:
+        data = json.loads(request.body)
+        new_status = data.get('status', '').strip()
+    except Exception:
+        new_status = request.POST.get('status', '').strip()
+
+    valid_statuses = [s[0] for s in Order.STATUS_CHOICES]
+    if new_status not in valid_statuses:
+        return JsonResponse({'error': 'Invalid status.'}, status=400)
+
+    # If cancelling from admin side, restore stock
+    if new_status == 'cancelled' and order.status not in ('cancelled', 'returned'):
+        for item in order.items.filter(status='active'):
+            if item.variant:
+                item.variant.stock += item.quantity
+                item.variant.save(update_fields=['stock'])
+            item.status = 'cancelled'
+            item.save()
+
+    # If marking as returned, restore stock
+    if new_status == 'returned' and order.status == 'return_requested':
+        for item in order.items.filter(status='return_requested'):
+            if item.variant:
+                item.variant.stock += item.quantity
+                item.variant.save(update_fields=['stock'])
+            item.status = 'returned'
+            item.save()
+
+    order.status = new_status
+    order.save(update_fields=['status', 'updated_at'])
+
+    return JsonResponse({
+        'success': True,
+        'message': f'Order status updated to {order.get_status_display()}.',
+        'new_status': new_status,
+        'new_status_display': order.get_status_display(),
+    })
+
+
+@never_cache
+@login_required
+@user_passes_test(is_admin, login_url='admin_login')
+def admin_inventory(request):
+    """Stock management view for admin."""
+    from products.models import Product, ProductVariant
+
+    variants = ProductVariant.objects.filter(
+        is_deleted=False,
+        product__is_deleted=False,
+        product__is_active=True,
+    ).select_related('product', 'product__category', 'product__brand').order_by('stock')
+
+    q = request.GET.get('q', '').strip()
+    if q:
+        variants = variants.filter(
+            Q(product__name__icontains=q) |
+            Q(product__brand__name__icontains=q) |
+            Q(product__category__name__icontains=q)
+        )
+
+    stock_filter = request.GET.get('stock', '')
+    if stock_filter == 'out':
+        variants = variants.filter(stock=0)
+    elif stock_filter == 'low':
+        variants = variants.filter(stock__gt=0, stock__lte=10)
+    elif stock_filter == 'ok':
+        variants = variants.filter(stock__gt=10)
+
+    paginator = Paginator(variants, 25)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+
+    stats = {
+        'total':    ProductVariant.objects.filter(is_deleted=False).count(),
+        'out':      ProductVariant.objects.filter(is_deleted=False, stock=0).count(),
+        'low':      ProductVariant.objects.filter(is_deleted=False, stock__gt=0, stock__lte=10).count(),
+        'healthy':  ProductVariant.objects.filter(is_deleted=False, stock__gt=10).count(),
+    }
+
+    return render(request, 'adminpanel/inventory.html', {
+        'page_obj': page_obj,
+        'q': q,
+        'stock_filter': stock_filter,
+        'stats': stats,
+    })
+
+
+@never_cache
+@login_required
+@user_passes_test(is_admin, login_url='admin_login')
+@require_POST
+def admin_update_stock(request, variant_id):
+    from products.models import ProductVariant
+    variant = get_object_or_404(ProductVariant, id=variant_id)
+    try:
+        data = json.loads(request.body)
+        new_stock = int(data.get('stock', 0))
+        if new_stock < 0:
+            return JsonResponse({'error': 'Stock cannot be negative.'}, status=400)
+    except (ValueError, TypeError, json.JSONDecodeError):
+        return JsonResponse({'error': 'Invalid stock value.'}, status=400)
+
+    variant.stock = new_stock
+    variant.save(update_fields=['stock'])
+    return JsonResponse({
+        'success': True,
+        'stock': variant.stock,
+        'message': f'Stock updated to {variant.stock}.',
+    })

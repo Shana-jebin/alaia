@@ -122,7 +122,7 @@ class Product(models.Model):
     # ── Helpers used in templates ──────────
     @property
     def total_stock(self):
-        return sum(v.stock for v in self.variants.all())
+        return sum(v.stock for v in self.variants.filter(is_deleted=False))
 
     @property
     def min_price(self):

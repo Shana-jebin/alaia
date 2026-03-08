@@ -121,7 +121,7 @@
         {% if default_variant.sales_price %}
           <span class="pd-price sale-price" id="pdPrice">₹{{ default_variant.sales_price|floatformat:0 }}</span>
           <span class="pd-price-orig" id="pdPriceOrig">₹{{ default_variant.price|floatformat:0 }}</span>
-         {{ default_variant.discount_percentage }}%
+         {{ default_variant.discount_percentage }}
           <span class="pd-discount-badge" id="pdDisc">{{ disc|floatformat:0 }}% OFF</span>
          
         {% else %}

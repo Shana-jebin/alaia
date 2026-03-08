@@ -1,9 +1,20 @@
 from django.shortcuts import render
 from django.core.paginator import Paginator
 from .models import Product, Category, Brand,ProductVariant
-from django.db.models import Q, Min, Sum, F, ExpressionWrapper, DecimalField, Avg, Max
+from django.db.models import Q, Min, Sum, F, ExpressionWrapper, DecimalField, Avg, Max,Count
 from .models import Occasion
-# ── Colour map: model value → display label + hex ──────────────────────────
+from django.db.models import Case, When, F, DecimalField
+from django.shortcuts import get_object_or_404, redirect, render
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+import json
+from .models import ( Product, ProductVariant, VariantImage,Review, Coupon, Category)
+from django.contrib import messages
+from .models import Cart, CartItem, ProductVariant
+
+
 COLOR_MAP = {
     'black':    {'label': 'Black',    'hex': '#1a1a1a'},
     'white':    {'label': 'White',    'hex': '#f5f0e8'},
@@ -48,15 +59,20 @@ def product_list(request):
     price_max           = request.GET.get('price_max', '').strip()
     page_number         = request.GET.get('page', 1)
 
-    # ── Base queryset ────────────────────────────────────────────────────────
+   
     products = (
         Product.objects
-        .filter(is_deleted=False, is_active=True)
+        .filter(
+            is_deleted=False,
+            is_active=True,
+            category__is_active=True,
+            category__is_deleted=False,
+            brand__is_active=True,
+        )
         .select_related('brand', 'category')
         .prefetch_related('variants__images')
     )
-
-    # ── Search ────────────────────────────────────────────────────────────────
+   
     if search_query:
         products = products.filter(
             Q(name__icontains=search_query) |
@@ -89,12 +105,17 @@ def product_list(request):
 
 
         
+    
 
-
-   
     products = products.annotate(
-        calculated_min_price=Min('variants__sales_price')
-)
+        calculated_min_price=Min(
+            Case(
+                When(variants__sales_price__isnull=False, then=F('variants__sales_price')),
+                default=F('variants__price'),
+                output_field=DecimalField(),
+            )
+        )
+    )
 
 
     if price_min:
@@ -109,7 +130,6 @@ def product_list(request):
         except ValueError:
             pass
 
-    # ── Sort ──────────────────────────────────────────────────────────────────
     if sort == 'price_low_high':
         products = products.order_by('calculated_min_price')
 
@@ -127,19 +147,20 @@ def product_list(request):
         ).order_by('-discount_amount')
 
     else:
-        # Default → New Arrivals
+        
         products = products.order_by('-created_at')
 
-    # ── Pagination ────────────────────────────────────────────────────────────
+    
     paginator     = Paginator(products, 12)
     products_page = paginator.get_page(page_number)
   
 
-    # ── Sidebar data ──────────────────────────────────────────────────────────
+   
+   
     categories = Category.objects.filter(is_deleted=False, is_active=True).order_by('name')
     brands     = Brand.objects.filter(is_active=True).order_by('name')
 
-    # Colors: only show colours that actually exist in current active products
+   
     used_colors = (
         ProductVariant.objects
         .filter(product__is_deleted=False, product__is_active=True)
@@ -151,7 +172,6 @@ def product_list(request):
         for c in used_colors if c
     ]
 
-    # Sizes: same logic
     used_sizes = (
         ProductVariant.objects
         .filter(product__is_deleted=False, product__is_active=True)
@@ -185,10 +205,10 @@ def product_list(request):
         return q.urlencode()
 
     context = {
-        # Products
+     
         'products':            products_page,
 
-        # Active filter values
+        
         'search_query':        search_query,
         'sort':                sort,
         'selected_categories': selected_categories,
@@ -199,14 +219,12 @@ def product_list(request):
         'price_min':           price_min,
         'price_max':           price_max,
 
-        # Sidebar lists
         'categories':          categories,
         'brands':              brands,
         'available_colors':    available_colors,
         'available_sizes':     available_sizes,
         'available_occasions': available_occasions,
 
-        # URL helpers
         'query_string':        query_string,
         'query_string_no_cat':   qs_without('category'),
         'query_string_no_brand': qs_without('brand'),
@@ -220,28 +238,21 @@ def product_list(request):
     return render(request, 'products/shop.html', context)
 
 
-from django.shortcuts import get_object_or_404, redirect, render
-from django.http import JsonResponse
-from django.views.decorators.http import require_POST
-from django.contrib.auth.decorators import login_required
-from django.db.models import Avg, Count, Q
-from django.utils import timezone
-import json
 
-from .models import (
-    Product, ProductVariant, VariantImage,   # ← VariantImage, not ProductImage
-    Review, Coupon, Category
-)
 
 
 def product_detail(request, slug):
-    product = get_object_or_404(Product, slug=slug)   # ProductManager hides deleted
+    product = get_object_or_404(Product, slug=slug)   
 
-    # ── Redirect guard: deleted or inactive → back to shop ──────────
-    if not product.is_active or product.is_deleted:
-        return redirect('products:shop')
+    if (
+        not product.is_active or
+        product.is_deleted or
+        not product.category.is_active or
+        product.category.is_deleted or
+        not product.brand.is_active
+    ):
+        return redirect('products:product_list')
 
-    # ── Variants ─────────────────────────────────────────────────────
     variants = (
         product.variants
         .filter(is_deleted=False)
@@ -250,7 +261,7 @@ def product_detail(request, slug):
     )
     default_variant = variants.filter(stock__gt=0).first() or variants.first()
 
-    # ── Reviews ──────────────────────────────────────────────────────
+   
     reviews = (
         Review.objects
         .filter(product=product, is_approved=True)
@@ -262,7 +273,7 @@ def product_detail(request, slug):
     review_count = stats['total']
     star_breakdown = {s: reviews.filter(rating=s).count() for s in range(5, 0, -1)}
 
-    # ── Coupons ───────────────────────────────────────────────────────
+  
     now = timezone.now()
     coupons = Coupon.objects.filter(
         Q(products=product) | Q(categories=product.category),
@@ -271,9 +282,8 @@ def product_detail(request, slug):
         valid_to__gte=now,
     ).distinct()
 
-    # ── Related products ──────────────────────────────────────────────
     related = (
-        Product.objects                        # ProductManager auto-hides deleted
+        Product.objects                      
         .filter(
             Q(category=product.category) | Q(brand=product.brand),
             is_active=True,
@@ -283,7 +293,7 @@ def product_detail(request, slug):
         .distinct()[:8]
     )
 
-    # ── Stock status ──────────────────────────────────────────────────
+   
     total_stock  = product.total_stock
     stock_status = (
         'out_of_stock' if total_stock == 0
@@ -291,7 +301,7 @@ def product_detail(request, slug):
         else 'in_stock'
     )
 
-    # ── Has current user already reviewed? ───────────────────────────
+   
     user_reviewed = (
         request.user.is_authenticated
         and reviews.filter(user=request.user).exists()
@@ -313,9 +323,15 @@ def product_detail(request, slug):
     })
 
 
-# ── AJAX: variant price/stock/images on size change ──────────────────
+
 def variant_data(request, variant_id):
-    variant = get_object_or_404(ProductVariant, id=variant_id, is_deleted=False)
+    variant = get_object_or_404(
+    ProductVariant.objects.select_related('product'),
+    id=variant_id,
+    is_deleted=False,
+    product__is_active=True,
+    product__is_deleted=False,
+)
     images  = [
         {'url': img.image.url}
         for img in variant.images.all()
@@ -323,14 +339,13 @@ def variant_data(request, variant_id):
     return JsonResponse({
         'id':          variant.id,
         'price':       str(variant.price),
-        'sales_price': str(variant.final_price),   # uses your final_price property
+        'sales_price': str(variant.final_price),   
         'discount_pct': variant.discount_percentage,
         'stock':       variant.stock,
         'images':      images,
     })
 
 
-# ── AJAX: submit review ───────────────────────────────────────────────
 @require_POST
 @login_required
 def submit_review(request, product_id):
@@ -374,9 +389,6 @@ def submit_review(request, product_id):
 
 
 
-from django.shortcuts import get_object_or_404, redirect
-from django.contrib import messages
-from .models import Cart, CartItem, ProductVariant
 
 
 def add_to_cart(request, variant_id):

@@ -1,0 +1,123 @@
+{% extends 'adminpanel/base_admin.html' %}
+{% load static %}
+{% block page_title %}Order {{ order.order_id }}{% endblock %}
+
+{% block content %}
+
+
+<div class="page-header">
+  <a href="{% url 'admin_order_list' %}" class="back-link">← All Orders</a>
+</div>
+
+<div class="od-grid">
+  <!-- Left -->
+  <div>
+    <div class="panel">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div class="od-id">{{ order.order_id }}</div>
+          <div class="od-date">{{ order.created_at|date:"d F Y · H:i" }}</div>
+        </div>
+        <span class="status-badge sb-{{ order.status }}">
+          <span class="sdot"></span>{{ order.get_status_display }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Items -->
+    <div class="panel">
+      <div class="panel-title">Order Items ({{ order.items.count }})</div>
+      {% for item in order.items.all %}
+      <div class="item-row">
+        <div class="item-img">
+          {% if item.image_url %}<img src="{{ item.image_url }}" alt="{{ item.product_name }}">{% endif %}
+        </div>
+        <div class="item-info">
+          <div class="item-name">{{ item.product_name }}</div>
+          <div class="item-meta">{{ item.color|title }} / {{ item.size }} · Qty {{ item.quantity }}</div>
+          {% if item.status != 'active' %}
+          <span class="status-badge sb-{{ item.status }}" style="margin-top:4px;font-size:8px;padding:2px 8px;">
+            <span class="sdot"></span>{{ item.get_status_display }}
+          </span>
+          {% endif %}
+        </div>
+        <div class="item-price">₹{{ item.subtotal|floatformat:0 }}</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Customer & Address -->
+    <div class="panel">
+      <div class="panel-title">Customer &amp; Delivery</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div>
+          <div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#8a8480;margin-bottom:6px;">Customer</div>
+          <div style="font-size:13px;color:#f0ece6;margin-bottom:2px;">{{ order.user.get_full_name|default:order.user.email }}</div>
+          <div style="font-size:11px;color:#8a8480;">{{ order.user.email }}</div>
+        </div>
+        <div>
+          <div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#8a8480;margin-bottom:6px;">Delivery Address</div>
+          <div class="addr-text">
+            <strong style="color:#f0ece6;">{{ order.full_name }}</strong><br>
+            {{ order.address_line1 }}<br>
+            {% if order.address_line2 %}{{ order.address_line2 }}<br>{% endif %}
+            {{ order.city }}, {{ order.state }} {{ order.postal_code }}<br>
+            {{ order.country }} · {{ order.phone }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right -->
+  <div>
+    <!-- Payment Summary -->
+    <div class="panel">
+      <div class="panel-title">Payment Summary</div>
+      <div class="sum-row"><span>Subtotal</span><span>₹{{ order.subtotal|floatformat:0 }}</span></div>
+      {% if order.discount > 0 %}
+      <div class="sum-row" style="color:#4caf50;"><span>Discount ({{ order.coupon_code }})</span><span>- ₹{{ order.discount|floatformat:0 }}</span></div>
+      {% endif %}
+      <div class="sum-row"><span>Shipping</span><span>{% if order.shipping > 0 %}₹{{ order.shipping|floatformat:0 }}{% else %}Free{% endif %}</span></div>
+      <div class="sum-row"><span>Method</span><span>{{ order.get_payment_method_display }}</span></div>
+      <div class="sum-row grand"><span>Total</span><span>₹{{ order.total|floatformat:0 }}</span></div>
+    </div>
+
+    <!-- Change Status -->
+    <div class="panel">
+      <div class="panel-title">Update Order Status</div>
+      <select class="status-select" id="statusSelect">
+        {% for val, label in status_choices %}
+        <option value="{{ val }}" {% if order.status == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn-update" onclick="updateStatus()">Update Status</button>
+      <div class="update-msg" id="updateMsg"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = () => document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+function updateStatus() {
+  const status = document.getElementById('statusSelect').value;
+  const msg = document.getElementById('updateMsg');
+  fetch("{% url 'admin_order_status' order.order_id %}", {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF() },
+    body: JSON.stringify({ status })
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      msg.textContent = d.message; msg.className = 'update-msg ok';
+      setTimeout(() => window.location.reload(), 1200);
+    } else {
+      msg.textContent = d.error; msg.className = 'update-msg err';
+    }
+  });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,65 @@
+
+.page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; }
+.page-title { font-size:20px; font-weight:600; color:#f0ece6; }
+
+.stats-row { display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-bottom:24px; }
+.mini-stat { background:#2a2520; border:1px solid rgba(201,184,168,.12); padding:16px; }
+.mini-stat-label { font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:#8a8480; margin-bottom:6px; }
+.mini-stat-val { font-size:22px; font-weight:600; color:#f0ece6; }
+.mini-stat-val.accent { color:#c9a96e; }
+
+.filter-bar { background:#2a2520; border:1px solid rgba(201,184,168,.12); padding:16px 20px; margin-bottom:20px; }
+.filter-row { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+.filter-group { display:flex; flex-direction:column; gap:4px; }
+.filter-label { font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:#8a8480; }
+.filter-input, .filter-select {
+  background:#1e1b18; border:1px solid rgba(201,184,168,.15);
+  color:#f0ece6; padding:8px 12px; font-size:12px; outline:none;
+  font-family:inherit;
+}
+.filter-input:focus, .filter-select:focus { border-color:#c9a96e; }
+.filter-btn { background:#c9a96e; color:#1e1b18; border:none; cursor:pointer; padding:9px 20px; font-size:10px; letter-spacing:.1em; text-transform:uppercase; transition:background .2s; }
+.filter-btn:hover { background:#b8945a; }
+.filter-clear { color:#8a8480; font-size:11px; text-decoration:none; padding:9px 8px; transition:color .2s; }
+.filter-clear:hover { color:#f0ece6; }
+
+.order-table { width:100%; border-collapse:collapse; }
+.order-table th {
+  background:#2a2520; color:#8a8480;
+  font-size:9px; letter-spacing:.1em; text-transform:uppercase;
+  padding:12px 16px; text-align:left; border-bottom:1px solid rgba(201,184,168,.1);
+  cursor:pointer;
+}
+.order-table th:hover { color:#c9a96e; }
+.order-table td { padding:14px 16px; border-bottom:1px solid rgba(201,184,168,.06); vertical-align:middle; }
+.order-table tr:hover td { background:rgba(201,184,168,.03); }
+
+.ot-id { font-size:12px; font-weight:600; color:#c9a96e; letter-spacing:.04em; }
+.ot-user { font-size:12px; color:#f0ece6; }
+.ot-user-email { font-size:10px; color:#8a8480; }
+.ot-date { font-size:11px; color:#8a8480; }
+.ot-total { font-size:14px; font-weight:600; color:#f0ece6; }
+.ot-items { font-size:10px; color:#8a8480; }
+
+.status-badge {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:4px 10px; font-size:9px; letter-spacing:.1em; text-transform:uppercase;
+}
+.sdot { width:6px; height:6px; border-radius:50%; }
+.sb-pending{background:#332d1a;color:#c9a96e;} .sb-pending .sdot{background:#c9a96e;}
+.sb-confirmed{background:#1a2a33;color:#64b5f6;} .sb-confirmed .sdot{background:#64b5f6;}
+.sb-shipped{background:#1a1a33;color:#9fa8da;} .sb-shipped .sdot{background:#9fa8da;}
+.sb-out_for_delivery{background:#1a2e1a;color:#81c784;} .sb-out_for_delivery .sdot{background:#81c784;}
+.sb-delivered{background:#1a2a1a;color:#4caf50;} .sb-delivered .sdot{background:#4caf50;}
+.sb-cancelled{background:#2e1a1a;color:#ef9a9a;} .sb-cancelled .sdot{background:#ef9a9a;}
+.sb-return_requested{background:#2e251a;color:#ffcc80;} .sb-return_requested .sdot{background:#ffcc80;}
+.sb-returned{background:#222;color:#888;} .sb-returned .sdot{background:#888;}
+
+.btn-view { background:none; border:1px solid rgba(201,184,168,.2); color:#c9a96e; padding:6px 14px; font-size:10px; letter-spacing:.08em; text-transform:uppercase; cursor:pointer; text-decoration:none; display:inline-block; transition:all .2s; }
+.btn-view:hover { background:#c9a96e; color:#1e1b18; }
+
+.pagination { display:flex; gap:8px; align-items:center; margin-top:24px; }
+.page-btn { background:#2a2520; border:1px solid rgba(201,184,168,.15); color:#8a8480; padding:8px 14px; font-size:11px; text-decoration:none; transition:all .2s; }
+.page-btn:hover, .page-btn.active { background:#c9a96e; color:#1e1b18; border-color:#c9a96e; }
+
+.empty-state { text-align:center; padding:60px; color:#8a8480; font-size:13px; }

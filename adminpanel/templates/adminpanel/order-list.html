@@ -1,0 +1,128 @@
+{% extends 'adminpanel/base_admin.html' %}
+{% load static %}
+{% block page_title %}Orders{% endblock %}
+
+{% block content %}
+
+
+<div class="page-header">
+  <div class="page-title">Order Management</div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+  <div class="mini-stat">
+    <div class="mini-stat-label">Total Orders</div>
+    <div class="mini-stat-val">{{ stats.total }}</div>
+  </div>
+  <div class="mini-stat">
+    <div class="mini-stat-label">Pending</div>
+    <div class="mini-stat-val accent">{{ stats.pending }}</div>
+  </div>
+  <div class="mini-stat">
+    <div class="mini-stat-label">Shipped</div>
+    <div class="mini-stat-val">{{ stats.shipped }}</div>
+  </div>
+  <div class="mini-stat">
+    <div class="mini-stat-label">Delivered</div>
+    <div class="mini-stat-val">{{ stats.delivered }}</div>
+  </div>
+  <div class="mini-stat">
+    <div class="mini-stat-label">Cancelled</div>
+    <div class="mini-stat-val">{{ stats.cancelled }}</div>
+  </div>
+  <div class="mini-stat">
+    <div class="mini-stat-label">Revenue</div>
+    <div class="mini-stat-val accent">₹{{ stats.revenue|floatformat:0 }}</div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="filter-bar">
+  <form method="GET">
+    <div class="filter-row">
+      <div class="filter-group">
+        <span class="filter-label">Search</span>
+        <input type="text" class="filter-input" name="q" value="{{ q }}" placeholder="Order ID, customer, product…" style="min-width:220px;">
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Status</span>
+        <select class="filter-select" name="status">
+          <option value="">All Statuses</option>
+          {% for val, label in status_choices %}
+          <option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">From</span>
+        <input type="date" class="filter-input" name="date_from" value="{{ date_from }}">
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">To</span>
+        <input type="date" class="filter-input" name="date_to" value="{{ date_to }}">
+      </div>
+      <button type="submit" class="filter-btn">Filter</button>
+      {% if q or status_filter or date_from or date_to %}
+      <a href="{% url 'admin_order_list' %}" class="filter-clear">Clear ✕</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<!-- Table -->
+{% if page_obj.object_list %}
+<div style="overflow-x:auto;">
+  <table class="order-table">
+    <thead>
+      <tr>
+        <th><a href="?sort={% if sort == '-created_at' %}created_at{% else %}-created_at{% endif %}&q={{ q }}&status={{ status_filter }}" style="color:inherit;text-decoration:none;">Order ID</a></th>
+        <th>Customer</th>
+        <th><a href="?sort={% if sort == '-created_at' %}created_at{% else %}-created_at{% endif %}&q={{ q }}&status={{ status_filter }}" style="color:inherit;text-decoration:none;">Date ↕</a></th>
+        <th>Items</th>
+        <th><a href="?sort={% if sort == '-total' %}total{% else %}-total{% endif %}&q={{ q }}&status={{ status_filter }}" style="color:inherit;text-decoration:none;">Total ↕</a></th>
+        <th>Status</th>
+        <th>Payment</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for order in page_obj %}
+      <tr>
+        <td><span class="ot-id">{{ order.order_id }}</span></td>
+        <td>
+          <div class="ot-user">{{ order.full_name }}</div>
+          <div class="ot-user-email">{{ order.user.email }}</div>
+        </td>
+        <td class="ot-date">{{ order.created_at|date:"d M Y" }}<br>{{ order.created_at|time:"H:i" }}</td>
+        <td class="ot-items">{{ order.items.count }} item{% if order.items.count != 1 %}s{% endif %}</td>
+        <td class="ot-total">₹{{ order.total|floatformat:0 }}</td>
+        <td><span class="status-badge sb-{{ order.status }}"><span class="sdot"></span>{{ order.get_status_display }}</span></td>
+        <td style="font-size:11px;color:#8a8480;">{{ order.get_payment_method_display }}</td>
+        <td><a href="{% url 'admin_order_detail' order.order_id %}" class="btn-view">View</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<div class="pagination">
+  {% if page_obj.has_previous %}
+  <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&status={{ status_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="page-btn">← Prev</a>
+  {% endif %}
+  <span style="font-size:11px;color:#8a8480;">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}
+  <a href="?page={{ page_obj.next_page_number }}&q={{ q }}&status={{ status_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="page-btn">Next →</a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+  <div style="font-size:32px;margin-bottom:12px;">📋</div>
+  No orders found{% if q or status_filter %} matching your filters{% endif %}.
+</div>
+{% endif %}
+{% endblock %}

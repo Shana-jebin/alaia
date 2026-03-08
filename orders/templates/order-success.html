@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Order Confirmed — ALAIA{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+{% endblock %}
+
+{% block content %}
+<div class="success-wrap">
+
+  <div class="check-ring">
+    <svg width="36" height="36" fill="none" stroke="var(--accent)" stroke-width="2" viewBox="0 0 24 24">
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+  </div>
+
+  <div class="success-label">Order Confirmed</div>
+  <h1 class="success-title">Thank You,<br><em>{{ order.full_name|truncatewords:1 }}</em></h1>
+  <p class="success-sub">
+    Your order has been placed successfully. We'll prepare your pieces with care
+    and notify you when they're on their way.
+  </p>
+
+  <div class="order-badge">
+    <div class="order-badge-label">Order Reference</div>
+    <div class="order-badge-id">{{ order.order_id }}</div>
+    <div class="order-badge-date">{{ order.created_at|date:"d F Y · H:i" }}</div>
+  </div>
+
+  <!-- Items -->
+  <div class="success-items">
+    {% for item in order.items.all %}
+    <div class="success-item">
+      <div class="success-item-img">
+        {% if item.image_url %}<img src="{{ item.image_url }}" alt="{{ item.product_name }}">{% endif %}
+      </div>
+      <div class="success-item-info">
+        <div class="success-item-name">{{ item.product_name }}</div>
+        <div class="success-item-meta">{{ item.color|title }} / {{ item.size }} · Qty {{ item.quantity }}</div>
+      </div>
+      <div class="success-item-price">₹{{ item.subtotal|floatformat:0 }}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="success-total"><span>Subtotal</span><span>₹{{ order.subtotal|floatformat:0 }}</span></div>
+  {% if order.discount > 0 %}
+  <div class="success-total" style="color:#27ae60;"><span>Discount ({{ order.coupon_code }})</span><span>- ₹{{ order.discount|floatformat:0 }}</span></div>
+  {% endif %}
+  <div class="success-total">
+    <span>Shipping</span>
+    <span>{% if order.shipping > 0 %}₹{{ order.shipping|floatformat:0 }}{% else %}Free{% endif %}</span>
+  </div>
+  <div class="success-total grand">
+    <span>Total Paid</span>
+    <span>₹{{ order.total|floatformat:0 }}</span>
+  </div>
+
+  <div class="success-actions">
+    <a href="{% url 'orders:order_detail' order.order_id %}" class="btn-primary">View Order Details</a>
+    <a href="{% url 'products:product_list' %}" class="btn-secondary">Continue Shopping</a>
+  </div>
+
+</div>
+{% endblock %}

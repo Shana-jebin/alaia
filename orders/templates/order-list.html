@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Orders — ALAIA{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+{% endblock %}
+
+{% block content %}
+<div class="ol-wrap">
+
+  <div class="ol-header">
+    <h1 class="ol-title">My Orders</h1>
+    <span class="ol-count">{{ orders|length }} order{% if orders|length != 1 %}s{% endif %}</span>
+  </div>
+
+  <!-- Filters -->
+  <form method="GET" class="ol-filters">
+    <input type="text" class="filter-input" name="q" value="{{ q }}" placeholder="Search by order ID or product name…">
+    <select class="filter-select" name="status">
+      <option value="">All Statuses</option>
+      {% for val, label in status_choices %}
+      <option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="filter-btn">Search</button>
+    {% if q or status_filter %}
+    <a href="{% url 'orders:order_list' %}" class="filter-clear">Clear ✕</a>
+    {% endif %}
+  </form>
+
+  {% if orders %}
+    {% for order in orders %}
+    <div class="order-card">
+      <div class="order-card-header">
+        <div class="order-id-block">
+          <div class="order-id-label">Order ID</div>
+          <div class="order-id-val">{{ order.order_id }}</div>
+          <div class="order-date">{{ order.created_at|date:"d M Y, H:i" }}</div>
+        </div>
+
+        <span class="status-badge sb-{{ order.status }}">
+          <span class="sdot"></span>
+          {{ order.get_status_display }}
+        </span>
+
+        <div class="order-total-block">
+          <div class="order-total-label">Total</div>
+          <div class="order-total-val">₹{{ order.total|floatformat:0 }}</div>
+        </div>
+      </div>
+
+      <div class="order-card-body">
+        <div class="order-items-preview">
+          {% for item in order.items.all|slice:":4" %}
+          <div class="preview-img">
+            {% if item.image_url %}<img src="{{ item.image_url }}" alt="{{ item.product_name }}">{% endif %}
+          </div>
+          {% endfor %}
+          {% if order.items.count > 4 %}
+          <div class="preview-more">+{{ order.items.count|add:"-4" }}</div>
+          {% endif %}
+        </div>
+        <a href="{% url 'orders:order_detail' order.order_id %}" class="btn-view-detail">
+          View Details →
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+
+  {% else %}
+  <div class="ol-empty">
+    <svg width="72" height="72" fill="none" stroke="var(--border)" stroke-width=".8" viewBox="0 0 24 24" style="margin-bottom:24px;">
+      <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+      <rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="11" y2="16"/>
+    </svg>
+    <div class="ol-empty-title">No orders yet</div>
+    <div class="ol-empty-sub">{% if q or status_filter %}No orders match your filters.{% else %}Explore our collection and place your first order.{% endif %}</div>
+    <a href="{% url 'products:product_list' %}" class="btn-shop">Shop Collection</a>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

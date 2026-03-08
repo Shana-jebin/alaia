@@ -80,7 +80,7 @@
             <div class="minimal-hover">
   <h3 class="minimal-title">{{ product.name }}</h3>
   <p class="minimal-price">₹ {{ product.min_price }}</p>
-  <a href="#" class="minimal-btn">
+  <a href="{% url 'products:product_detail' product.slug %}" class="minimal-btn">
     View Details
   </a>
 </div>
@@ -95,6 +95,7 @@
   <!-- Newsletter Section -->
 {% endblock %}
 {% block extra_js %}
+{{ block.super }}
   <script>
     // Scroll Reveal Animation
     const reveals = document.querySelectorAll('.reveal')

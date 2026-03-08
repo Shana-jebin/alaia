@@ -439,10 +439,10 @@ def resend_otp(request):
 
 
 
-@never_cache
+
 def logout_view(request):
     logout(request)
-    return redirect('login')
+    return redirect('/')
 
 
 

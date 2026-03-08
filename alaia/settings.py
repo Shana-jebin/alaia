@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'user_profile',
     'products.apps.ProductsConfig',
     'core',
+    'orders',
     'django.contrib.sites',
     'allauth',
     'allauth.account',

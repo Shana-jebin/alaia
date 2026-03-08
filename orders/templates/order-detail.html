@@ -1,0 +1,280 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Order {{ order.order_id }} — ALAIA{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+{% endblock %}
+
+{% block content %}
+<div class="od-wrap">
+
+  <a href="{% url 'orders:order_list' %}" class="od-back">
+    ← Back to Orders
+  </a>
+
+  <!-- Header -->
+  <div class="od-header">
+    <div>
+      <div class="od-title">{{ order.order_id }}</div>
+      <div class="od-date">Placed on {{ order.created_at|date:"d F Y" }} at {{ order.created_at|time:"H:i" }}</div>
+    </div>
+    <span class="status-badge sb-{{ order.status }}">
+      <span class="sdot"></span>
+      {{ order.get_status_display }}
+    </span>
+  </div>
+
+  <!-- Progress tracker (only for active orders) -->
+  {% if order.status not in "cancelled,returned,return_requested" %}
+  <div class="progress-wrap">
+    <div class="progress-title">Order Progress</div>
+    <div class="progress-track">
+      {% with step=order.status_step %}
+      {% for s_val, s_label in order.STATUS_CHOICES|slice:":5" %}
+      {% with i=forloop.counter %}
+      <div class="progress-step">
+        <div class="step-dot {% if i < step %}done{% elif i == step %}active{% endif %}"></div>
+        <div class="step-line {% if i < step %}done{% endif %}"></div>
+        <div class="step-label {% if i == step %}active{% endif %}">{{ s_label }}</div>
+      </div>
+      {% endwith %}
+      {% endfor %}
+      {% endwith %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if order.status == 'cancelled' %}
+  <div class="status-banner banner-cancelled">
+    Order Cancelled
+    {% if order.items.first.cancel_reason %} — Reason: {{ order.items.first.cancel_reason }}{% endif %}
+  </div>
+  {% elif order.status == 'return_requested' %}
+  <div class="status-banner banner-return">
+    Return Requested — Under Review
+    {% if order.items.first.return_reason %} — Reason: {{ order.items.first.return_reason }}{% endif %}
+  </div>
+  {% endif %}
+
+  <div class="od-grid">
+
+    <!-- LEFT: Items -->
+    <div class="od-items">
+      <div class="od-items-title">{{ order.items.count }} item{% if order.items.count != 1 %}s{% endif %}</div>
+
+      {% for item in order.items.all %}
+      <div class="od-item" id="od-item-{{ item.id }}">
+        <div class="od-item-img">
+          {% if item.image_url %}<img src="{{ item.image_url }}" alt="{{ item.product_name }}">{% endif %}
+        </div>
+        <div class="od-item-info">
+          <div class="od-item-brand">{{ item.brand_name }}</div>
+          <div class="od-item-name">{{ item.product_name }}</div>
+          <div class="od-item-meta">{{ item.color|title }} / Size {{ item.size }} · Qty {{ item.quantity }}</div>
+          <div class="od-item-price">₹{{ item.unit_price|floatformat:0 }} × {{ item.quantity }} = ₹{{ item.subtotal|floatformat:0 }}</div>
+
+          {% if item.status == 'active' %}
+            {% if order.can_cancel %}
+            <button class="btn-cancel-item" onclick="openCancelItem({{ item.id }}, '{{ item.product_name|escapejs }}')">
+              <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+              </svg>
+              Cancel this item
+            </button>
+            {% endif %}
+          {% elif item.status == 'cancelled' %}
+            <span class="item-status-badge isb-cancelled">Cancelled</span>
+          {% elif item.status == 'return_requested' %}
+            <span class="item-status-badge isb-return_requested">Return Requested</span>
+          {% elif item.status == 'returned' %}
+            <span class="item-status-badge isb-returned">Returned</span>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- RIGHT: Info panels -->
+    <div class="od-right">
+
+      <!-- Summary -->
+      <div class="od-panel">
+        <div class="od-panel-title">Payment Summary</div>
+        <div class="sum-row"><span>Subtotal</span><span>₹{{ order.subtotal|floatformat:0 }}</span></div>
+        {% if order.discount > 0 %}
+        <div class="sum-row" style="color:#27ae60;"><span>Discount ({{ order.coupon_code }})</span><span>- ₹{{ order.discount|floatformat:0 }}</span></div>
+        {% endif %}
+        <div class="sum-row">
+          <span>Shipping</span>
+          <span>{% if order.shipping > 0 %}₹{{ order.shipping|floatformat:0 }}{% else %}Free{% endif %}</span>
+        </div>
+        <div class="sum-row"><span>Payment</span><span>{{ order.get_payment_method_display }}</span></div>
+        <div class="sum-row grand"><span>Total</span><span>₹{{ order.total|floatformat:0 }}</span></div>
+      </div>
+
+      <!-- Address -->
+      <div class="od-panel">
+        <div class="od-panel-title">Delivery Address</div>
+        <div class="addr-text">
+          <strong>{{ order.full_name }}</strong><br>
+          {{ order.address_line1 }}<br>
+          {% if order.address_line2 %}{{ order.address_line2 }}<br>{% endif %}
+          {{ order.city }}, {{ order.state }} — {{ order.postal_code }}<br>
+          {{ order.country }}<br>
+          {{ order.phone }}
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="od-actions">
+        <a href="{% url 'orders:download_invoice' order.order_id %}" class="btn-action btn-invoice">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Download Invoice
+        </a>
+
+        {% if order.can_cancel %}
+        <button class="btn-action btn-cancel-order" onclick="openCancelOrder()">
+          Cancel Entire Order
+        </button>
+        {% endif %}
+
+        {% if order.can_return %}
+        <button class="btn-action btn-return-order" onclick="openReturn()">
+          Request Return
+        </button>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Cancel Order Modal -->
+<div class="modal-bg" id="cancelOrderModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('cancelOrderModal')">✕</button>
+    <div class="modal-title">Cancel Order</div>
+    <div class="modal-sub">Are you sure you want to cancel this entire order? Stock will be restored automatically.</div>
+    <textarea class="modal-textarea" id="cancelOrderReason" placeholder="Reason for cancellation (optional)…"></textarea>
+    <div class="modal-actions">
+      <button class="modal-cancel-btn" onclick="closeModal('cancelOrderModal')">Keep Order</button>
+      <button class="modal-confirm" style="background:var(--red);" onclick="confirmCancelOrder()">Yes, Cancel</button>
+    </div>
+    <div class="modal-msg" id="cancelOrderMsg"></div>
+  </div>
+</div>
+
+<!-- Cancel Item Modal -->
+<div class="modal-bg" id="cancelItemModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('cancelItemModal')">✕</button>
+    <div class="modal-title">Cancel Item</div>
+    <div class="modal-sub">Cancel <strong id="cancelItemName"></strong>? Stock will be restored.</div>
+    <textarea class="modal-textarea" id="cancelItemReason" placeholder="Reason for cancellation (optional)…"></textarea>
+    <div class="modal-actions">
+      <button class="modal-cancel-btn" onclick="closeModal('cancelItemModal')">Keep Item</button>
+      <button class="modal-confirm" style="background:var(--red);" onclick="confirmCancelItem()">Yes, Cancel</button>
+    </div>
+    <div class="modal-msg" id="cancelItemMsg"></div>
+  </div>
+</div>
+
+<!-- Return Modal -->
+<div class="modal-bg" id="returnModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('returnModal')">✕</button>
+    <div class="modal-title">Request Return</div>
+    <div class="modal-sub">Please provide a reason for your return request. Our team will review it within 1–2 business days.</div>
+    <textarea class="modal-textarea" id="returnReason" placeholder="Reason for return (required)…"></textarea>
+    <div class="modal-actions">
+      <button class="modal-cancel-btn" onclick="closeModal('returnModal')">Cancel</button>
+      <button class="modal-confirm" onclick="confirmReturn()">Submit Return</button>
+    </div>
+    <div class="modal-msg" id="returnMsg"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = () => document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+let pendingItemId = null;
+
+function openCancelOrder() { document.getElementById('cancelOrderModal').classList.add('open'); }
+function openReturn()      { document.getElementById('returnModal').classList.add('open'); }
+function openCancelItem(id, name) {
+  pendingItemId = id;
+  document.getElementById('cancelItemName').textContent = name;
+  document.getElementById('cancelItemModal').classList.add('open');
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// Close modals on backdrop click
+document.querySelectorAll('.modal-bg').forEach(bg => {
+  bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('open'); });
+});
+
+function confirmCancelOrder() {
+  const reason = document.getElementById('cancelOrderReason').value.trim();
+  const msg    = document.getElementById('cancelOrderMsg');
+  fetch("{% url 'orders:cancel_order' order.order_id %}", {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF() },
+    body: JSON.stringify({ reason })
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      msg.textContent = d.message; msg.className = 'modal-msg ok';
+      setTimeout(() => window.location.reload(), 1000);
+    } else {
+      msg.textContent = d.error; msg.className = 'modal-msg err';
+    }
+  });
+}
+
+function confirmCancelItem() {
+  const reason = document.getElementById('cancelItemReason').value.trim();
+  const msg    = document.getElementById('cancelItemMsg');
+  fetch(`/orders/cancel/{{ order.order_id }}/item/${pendingItemId}/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF() },
+    body: JSON.stringify({ reason })
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      msg.textContent = d.message; msg.className = 'modal-msg ok';
+      setTimeout(() => window.location.reload(), 1000);
+    } else {
+      msg.textContent = d.error; msg.className = 'modal-msg err';
+    }
+  });
+}
+
+function confirmReturn() {
+  const reason = document.getElementById('returnReason').value.trim();
+  const msg    = document.getElementById('returnMsg');
+  if (!reason) { msg.textContent = 'Please provide a reason.'; msg.className = 'modal-msg err'; return; }
+  fetch("{% url 'orders:return_order' order.order_id %}", {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF() },
+    body: JSON.stringify({ reason })
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      msg.textContent = d.message; msg.className = 'modal-msg ok';
+      setTimeout(() => window.location.reload(), 1000);
+    } else {
+      msg.textContent = d.error; msg.className = 'modal-msg err';
+    }
+  });
+}
+</script>
+{% endblock %}
