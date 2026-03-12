@@ -1,0 +1,805 @@
+{% extends 'adminpanel/base_admin.html' %}
+{% load static %}
+{% block title %}Coupons — ALAIA Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+  --gold: #c9a96e;
+  --gold-dim: #c9a96e18;
+  --gold-mid: #c9a96e44;
+  --s1: #111009;
+  --s2: #161412;
+  --s3: #1e1c18;
+  --border: #2a2520;
+  --t1: #f0ece6;
+  --t2: #c0bab4;
+  --t3: #888;
+  --t4: #555;
+  --green: #4ade80;
+  --red: #f87171;
+  --amber: #fbbf24;
+}
+
+/* ── Header ── */
+.cp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+.cp-header h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--t1);
+  margin: 0 0 3px;
+}
+.cp-header p { font-size: 12px; color: var(--t3); margin: 0; }
+
+.btn-gold {
+  background: var(--gold);
+  color: #120f0a;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .15s;
+}
+.btn-gold:hover { background: #d4b87a; }
+
+/* ── Search bar ── */
+.search-wrap {
+  position: relative;
+  margin-bottom: 16px;
+  max-width: 340px;
+  display: flex;
+  align-items: center;
+}
+.search-icon-btn {
+  position: absolute;
+  left: 10px;
+  background: none;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  z-index: 1;
+}
+.search-wrap input {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 32px 9px 34px;
+  color: var(--t1);
+  font-size: 13px;
+  outline: none;
+  transition: border-color .2s;
+}
+.search-wrap input:focus { border-color: var(--gold); }
+.search-clear {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  color: var(--t4);
+  font-size: 14px;
+  cursor: pointer;
+  display: none;
+  line-height: 1;
+  padding: 0;
+  transition: color .15s;
+}
+.search-clear:hover { color: var(--t1); }
+.search-clear.show { display: block; }
+
+/* ── Table ── */
+.tbl-card {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.tbl-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+
+thead th {
+  background: var(--s2);
+  padding: 11px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--t4);
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  white-space: nowrap;
+}
+tbody tr { border-top: 1px solid #1a1814; transition: background .1s; }
+tbody tr:hover { background: var(--s2); }
+td { padding: 12px 14px; color: var(--t2); vertical-align: middle; }
+
+.code-tag {
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gold);
+  background: var(--gold-dim);
+  border: 1px solid var(--gold-mid);
+  border-radius: 5px;
+  padding: 3px 8px;
+  letter-spacing: 1px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 20px;
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+.badge::before {
+  content: '';
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.badge.active    { background: #4ade8015; color: var(--green); }
+.badge.inactive  { background: #88888815; color: var(--t3); }
+.badge.expired   { background: #f8718115; color: var(--red); }
+.badge.scheduled { background: #fbbf2415; color: var(--amber); }
+.badge.exhausted { background: #f8718115; color: var(--red); }
+
+/* action buttons */
+.act-row { display: flex; gap: 5px; }
+.ico-btn {
+  background: var(--s3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--t3);
+  transition: all .12s;
+}
+.ico-btn:hover { background: #2a2520; color: var(--t1); }
+.ico-btn.red:hover { background: #f8717120; border-color: #f87171; color: var(--red); }
+
+.tog-btn {
+  font-size: 10px; font-weight: 700;
+  border-radius: 20px; padding: 3px 9px;
+  height: auto; width: auto;
+  cursor: pointer; border: 1px solid;
+  transition: all .15s;
+}
+.tog-btn.on  { background: #4ade8015; color: var(--green); border-color: #4ade8040; }
+.tog-btn.off { background: var(--s3); color: var(--t4); border-color: var(--border); }
+
+/* empty */
+.empty { text-align: center; padding: 50px 20px; color: var(--t4); font-size: 13px; }
+.empty span { font-size: 40px; display: block; margin-bottom: 10px; opacity: .3; }
+
+/* ── Modals ── */
+.modal-bg {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.7);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+.modal-bg.open { display: flex; }
+
+.modal {
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px;
+  width: 480px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: popIn .15s ease;
+}
+.modal.sm { width: 360px; }
+
+@keyframes popIn {
+  from { transform: scale(.95) translateY(6px); opacity: 0; }
+  to   { transform: scale(1)   translateY(0);   opacity: 1; }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.modal-header h3 { font-size: 16px; font-weight: 700; color: var(--t1); margin: 0; }
+.modal-close {
+  background: none; border: none;
+  color: var(--t3); font-size: 20px;
+  cursor: pointer; line-height: 1; padding: 0;
+  transition: color .12s;
+}
+.modal-close:hover { color: var(--t1); }
+
+/* Form fields inside modal */
+.field { margin-bottom: 14px; }
+.field label {
+  display: block;
+  font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .7px;
+  color: var(--t4); margin-bottom: 6px;
+}
+.field label .req { color: var(--gold); }
+.field input[type=text],
+.field input[type=number],
+.field input[type=datetime-local],
+.field textarea,
+.field select {
+  width: 100%; box-sizing: border-box;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 9px 12px;
+  color: var(--t1); font-size: 13px;
+  outline: none;
+  transition: border-color .18s;
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+  border-color: var(--gold);
+}
+.field textarea { resize: vertical; min-height: 60px; }
+.hint { font-size: 11px; color: var(--t4); margin-top: 4px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* Type tabs */
+.type-tabs {
+  display: flex;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  overflow: hidden;
+}
+.type-tabs input { display: none; }
+.type-tabs label {
+  flex: 1; text-align: center;
+  padding: 9px;
+  font-size: 13px; font-weight: 500;
+  color: var(--t4); cursor: pointer;
+  transition: all .15s;
+  margin: 0; text-transform: none; letter-spacing: normal;
+  display: block;
+}
+.type-tabs input:checked + label {
+  background: var(--gold);
+  color: #120f0a;
+  font-weight: 700;
+}
+
+/* switch */
+.sw-row {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--s3);
+}
+.sw-row:last-child { border-bottom: none; }
+.sw-name { font-size: 13px; color: var(--t2); }
+.sw-desc { font-size: 11px; color: var(--t4); margin-top: 1px; }
+.sw {
+  position: relative;
+  width: 38px; height: 21px;
+  cursor: pointer; flex-shrink: 0;
+}
+.sw input { display: none; }
+.sw-bg {
+  position: absolute; inset: 0;
+  background: var(--s3);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  transition: all .2s;
+}
+.sw-dot {
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 13px; height: 13px;
+  background: var(--t4); border-radius: 50%;
+  transition: transform .2s, background .2s;
+}
+.sw input:checked ~ .sw-bg { background: var(--gold-dim); border-color: var(--gold-mid); }
+.sw input:checked ~ .sw-dot { transform: translateX(17px); background: var(--gold); }
+
+/* modal footer */
+.modal-footer {
+  display: flex; gap: 8px;
+  justify-content: flex-end;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--s3);
+}
+.btn-save {
+  background: var(--gold); color: #120f0a;
+  border: none; border-radius: 7px;
+  padding: 9px 20px; font-size: 13px; font-weight: 700;
+  cursor: pointer; transition: background .15s;
+}
+.btn-save:hover { background: #d4b87a; }
+.btn-cancel {
+  background: transparent; color: var(--t3);
+  border: 1px solid var(--border); border-radius: 7px;
+  padding: 9px 16px; font-size: 13px;
+  cursor: pointer; transition: all .15s;
+}
+.btn-cancel:hover { color: var(--t1); border-color: #444; }
+.btn-del-confirm {
+  background: var(--red); color: #1a0808;
+  border: none; border-radius: 7px;
+  padding: 9px 20px; font-size: 13px; font-weight: 700;
+  cursor: pointer;
+}
+
+/* scrollbar */
+.modal::-webkit-scrollbar { width: 4px; }
+.modal::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* error box */
+.error-box {
+  background: #f8717115;
+  border: 1px solid #f8717144;
+  border-radius: 7px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  display: none;
+}
+.error-box.show { display: block; }
+.error-box li { font-size: 12px; color: var(--red); line-height: 1.8; }
+.field input.err, .field select.err, .field textarea.err {
+  border-color: var(--red) !important;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="cp-header">
+  <div>
+    <h2>🎫 Coupons</h2>
+    <p>Manage your store discount coupons</p>
+  </div>
+  <button class="btn-gold" onclick="openCreate()">+ New Coupon</button>
+</div>
+
+<!-- Search -->
+<form method="get" id="searchForm">
+  <div class="search-wrap">
+    <button type="submit" class="search-icon-btn" title="Search">🔍</button>
+    <input type="text" name="q" id="searchInput"
+           value="{{ q }}" placeholder="Search coupon code…"
+           autocomplete="off"
+           oninput="toggleClear(this)">
+    <button type="button" class="search-clear {% if q %}show{% endif %}"
+            id="clearBtn" onclick="clearSearch()">✕</button>
+  </div>
+</form>
+
+<!-- Table -->
+<div class="tbl-card">
+  <div class="tbl-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Discount</th>
+          <th>Min Order</th>
+          <th>Validity</th>
+          <th>Usage</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in page_obj %}
+        <tr id="row-{{ c.pk }}">
+          <td>
+            <span class="code-tag">{{ c.code }}</span>
+            {% if c.description %}
+              <div style="font-size:11px;color:var(--t4);margin-top:3px;">{{ c.description|truncatechars:30 }}</div>
+            {% endif %}
+          </td>
+          <td>
+            {% if c.discount_type == 'percent' %}
+              <strong style="color:var(--t1);">{{ c.discount_value|floatformat:0 }}%</strong>
+              {% if c.max_discount %}<div style="font-size:11px;color:var(--t4);">cap Rs.{{ c.max_discount|floatformat:0 }}</div>{% endif %}
+            {% else %}
+              <strong style="color:var(--t1);">Rs.{{ c.discount_value|floatformat:0 }}</strong>
+            {% endif %}
+          </td>
+          <td>
+            {% if c.min_order > 0 %}Rs.{{ c.min_order|floatformat:0 }}
+            {% else %}<span style="color:var(--t4);">—</span>{% endif %}
+          </td>
+          <td style="font-size:12px;line-height:1.7;">
+            {{ c.valid_from|date:"d M Y" }}<br>
+            <span style="color:var(--t4);">→ {{ c.valid_to|date:"d M Y" }}</span>
+          </td>
+          <td style="font-size:12px;">
+            {{ c.used_count }}{% if c.usage_limit %}/{{ c.usage_limit }}{% endif %}
+          </td>
+          <td>
+            <span class="badge {{ c.status }}" id="badge-{{ c.pk }}">{{ c.status }}</span>
+          </td>
+          <td>
+            <div class="act-row">
+              <button class="ico-btn tog-btn {% if c.is_active %}on{% else %}off{% endif %}"
+                      id="tog-{{ c.pk }}"
+                      onclick="toggleCoupon({{ c.pk }}, this)">
+                {{ c.is_active|yesno:"ON,OFF" }}
+              </button>
+              <button class="ico-btn" title="Edit"
+                      onclick="openEdit(
+                        {{ c.pk }},
+                        '{{ c.code }}',
+                        '{{ c.description|escapejs }}',
+                        '{{ c.discount_type }}',
+                        '{{ c.discount_value }}',
+                        '{{ c.max_discount|default:'' }}',
+                        '{{ c.min_order }}',
+                        '{{ c.valid_from|date:'Y-m-d' }}T{{ c.valid_from|time:'H:i' }}',
+                        '{{ c.valid_to|date:'Y-m-d' }}T{{ c.valid_to|time:'H:i' }}',
+                        '{{ c.usage_limit|default:'' }}',
+                        '{{ c.per_user_limit }}',
+                        {{ c.is_active|yesno:'true,false' }},
+                        {{ c.is_one_time|yesno:'true,false' }}
+                      )">✏️</button>
+              <button class="ico-btn red" title="Delete"
+                      onclick="openDelete({{ c.pk }}, '{{ c.code }}')">🗑</button>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7">
+            <div class="empty">
+              <span>🎫</span>
+              No coupons yet. <a href="#" onclick="openCreate()" style="color:var(--gold)">Create one →</a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if page_obj.has_other_pages %}
+  <div style="display:flex;gap:6px;justify-content:center;padding:16px;">
+    {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}"
+         style="background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:5px 12px;font-size:13px;color:var(--t3);text-decoration:none;">‹</a>
+    {% endif %}
+    {% for num in page_obj.paginator.page_range %}
+      {% if num == page_obj.number %}
+        <span style="background:var(--gold);color:#120f0a;border-radius:6px;padding:5px 12px;font-size:13px;font-weight:700;">{{ num }}</span>
+      {% elif num|add:"-2" <= page_obj.number and num|add:"2" >= page_obj.number %}
+        <a href="?page={{ num }}&q={{ q }}"
+           style="background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:5px 12px;font-size:13px;color:var(--t3);text-decoration:none;">{{ num }}</a>
+      {% endif %}
+    {% endfor %}
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}&q={{ q }}"
+         style="background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:5px 12px;font-size:13px;color:var(--t3);text-decoration:none;">›</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     CREATE / EDIT MODAL
+════════════════════════════════════════════════════════ -->
+<div class="modal-bg" id="formModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle">New Coupon</h3>
+      <button class="modal-close" onclick="closeModal('formModal')">✕</button>
+    </div>
+
+    <form method="post" id="couponForm" action="{% url 'admin_coupon_create' %}">
+      {% csrf_token %}
+      <input type="hidden" name="_pk" id="editPk" value="">
+
+      <div class="error-box" id="formErrors">
+        <ul id="errorList"></ul>
+      </div>
+
+      <div class="field">
+        <label>Code <span class="req">*</span></label>
+        <input type="text" name="code" id="fCode" maxlength="50"
+               placeholder="e.g. SUMMER25"
+               style="text-transform:uppercase;font-family:'Courier New',monospace;letter-spacing:2px;font-weight:700;">
+      </div>
+
+      <div class="field">
+        <label>Description</label>
+        <textarea name="description" id="fDesc" placeholder="Internal note…"></textarea>
+      </div>
+
+      <div class="field">
+        <label>Discount Type <span class="req">*</span></label>
+        <div class="type-tabs">
+          <input type="radio" name="discount_type" id="fPct" value="percent" checked>
+          <label for="fPct">% Percentage</label>
+          <input type="radio" name="discount_type" id="fFlat" value="flat">
+          <label for="fFlat">Rs. Flat</label>
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label>Value <span class="req">*</span></label>
+          <input type="number" name="discount_value" id="fVal" step="0.01" min="0.01" placeholder="20">
+        </div>
+        <div class="field" id="maxWrap">
+          <label>Max Cap (Rs.)</label>
+          <input type="number" name="max_discount" id="fMax" step="0.01" min="0" placeholder="500">
+          <div class="hint">Optional cap for % discounts</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Minimum Order (Rs.)</label>
+        <input type="number" name="min_order" id="fMin" step="0.01" min="0" placeholder="0 = no minimum">
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label>Valid From <span class="req">*</span></label>
+          <input type="datetime-local" name="valid_from" id="fFrom">
+        </div>
+        <div class="field">
+          <label>Valid To <span class="req">*</span></label>
+          <input type="datetime-local" name="valid_to" id="fTo">
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label>Usage Limit</label>
+          <input type="number" name="usage_limit" id="fUlimit" min="1" placeholder="Blank = unlimited">
+        </div>
+        <div class="field">
+          <label>Per-User Limit</label>
+          <input type="number" name="per_user_limit" id="fPulimit" min="1" value="1">
+        </div>
+      </div>
+
+      <div style="background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:4px 12px;margin-bottom:14px;">
+        <div class="sw-row">
+          <div>
+            <div class="sw-name">Active</div>
+            <div class="sw-desc">Customers can redeem this coupon</div>
+          </div>
+          <label class="sw">
+            <input type="checkbox" name="is_active" id="fActive" checked>
+            <div class="sw-bg"></div><div class="sw-dot"></div>
+          </label>
+        </div>
+        <div class="sw-row">
+          <div>
+            <div class="sw-name">One-Time Per User</div>
+            <div class="sw-desc">Each user can only use this once</div>
+          </div>
+          <label class="sw">
+            <input type="checkbox" name="is_one_time" id="fOneTime">
+            <div class="sw-bg"></div><div class="sw-dot"></div>
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="closeModal('formModal')">Cancel</button>
+        <button type="submit" class="btn-save" id="formSubmitBtn">Create Coupon</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     DELETE MODAL
+════════════════════════════════════════════════════════ -->
+<div class="modal-bg" id="delModal">
+  <div class="modal sm">
+    <div class="modal-header">
+      <h3>Delete Coupon</h3>
+      <button class="modal-close" onclick="closeModal('delModal')">✕</button>
+    </div>
+    <p id="delMsg" style="font-size:13px;color:var(--t3);margin:0 0 4px;line-height:1.5;"></p>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('delModal')">Cancel</button>
+      <button class="btn-del-confirm" id="delConfirmBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+const CSRF = document.cookie.match('csrftoken=([^;]+)')?.[1] ?? '';
+
+function toggleClear(inp) {
+  document.getElementById('clearBtn').classList.toggle('show', inp.value.length > 0);
+}
+function clearSearch() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('clearBtn').classList.remove('show');
+  document.getElementById('searchForm').submit();
+}
+// Submit on Enter key
+document.getElementById('searchInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    document.getElementById('searchForm').submit();
+  }
+  toggleClear(this);
+});
+
+// ── Modal helpers ─────────────────────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// Close on backdrop click
+document.querySelectorAll('.modal-bg').forEach(bg => {
+  bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('open'); });
+});
+
+// ── Discount type → show/hide max cap ────────────────────────────
+document.querySelectorAll('input[name=discount_type]').forEach(r => {
+  r.addEventListener('change', function() {
+    document.getElementById('maxWrap').style.opacity = this.value === 'percent' ? '1' : '0.4';
+  });
+});
+
+// ── Create modal ─────────────────────────────────────────────────
+function openCreate() {
+  document.getElementById('modalTitle').textContent    = 'New Coupon';
+  document.getElementById('formSubmitBtn').textContent = 'Create Coupon';
+  document.getElementById('couponForm').action         = '{% url "admin_coupon_create" %}';
+  document.getElementById('editPk').value              = '';
+
+  // Reset all fields
+  document.getElementById('fCode').value    = '';
+  document.getElementById('fDesc').value    = '';
+  document.getElementById('fVal').value     = '';
+  document.getElementById('fMax').value     = '';
+  document.getElementById('fMin').value     = '';
+  document.getElementById('fFrom').value    = '';
+  document.getElementById('fTo').value      = '';
+  document.getElementById('fUlimit').value  = '';
+  document.getElementById('fPulimit').value = '1';
+  document.getElementById('fActive').checked   = true;
+  document.getElementById('fOneTime').checked  = false;
+  document.getElementById('fPct').checked      = true;
+  document.getElementById('maxWrap').style.opacity = '1';
+
+  openModal('formModal');
+}
+
+// ── Edit modal ────────────────────────────────────────────────────
+function openEdit(pk, code, desc, dtype, dval, maxd, minord, vfrom, vto, ulimit, pulimit, isActive, isOneTime) {
+  document.getElementById('modalTitle').textContent    = 'Edit Coupon';
+  document.getElementById('formSubmitBtn').textContent = 'Save Changes';
+  document.getElementById('couponForm').action         = `/admin-panel/coupons/${pk}/edit/`;
+  document.getElementById('editPk').value              = pk;
+
+  document.getElementById('fCode').value    = code;
+  document.getElementById('fDesc').value    = desc;
+  document.getElementById('fVal').value     = dval;
+  document.getElementById('fMax').value     = maxd;
+  document.getElementById('fMin').value     = minord;
+  document.getElementById('fFrom').value    = vfrom;
+  document.getElementById('fTo').value      = vto;
+  document.getElementById('fUlimit').value  = ulimit;
+  document.getElementById('fPulimit').value = pulimit;
+  document.getElementById('fActive').checked  = isActive;
+  document.getElementById('fOneTime').checked = isOneTime;
+
+  if (dtype === 'flat') {
+    document.getElementById('fFlat').checked = true;
+    document.getElementById('maxWrap').style.opacity = '0.4';
+  } else {
+    document.getElementById('fPct').checked = true;
+    document.getElementById('maxWrap').style.opacity = '1';
+  }
+
+  openModal('formModal');
+}
+
+// ── Toggle active ─────────────────────────────────────────────────
+function toggleCoupon(pk, btn) {
+  fetch(`/admin-panel/coupons/${pk}/toggle/`, {
+    method: 'POST', headers: { 'X-CSRFToken': CSRF }
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (!d.success) return;
+    btn.textContent = d.is_active ? 'ON' : 'OFF';
+    btn.className   = 'ico-btn tog-btn ' + (d.is_active ? 'on' : 'off');
+    const badge     = document.getElementById('badge-' + pk);
+    badge.className = 'badge ' + d.status;
+    badge.textContent = d.status;
+  });
+}
+
+// ── Delete ────────────────────────────────────────────────────────
+function openDelete(pk, code) {
+  document.getElementById('delMsg').textContent = `Delete coupon "${code}"? This cannot be undone.`;
+  document.getElementById('delConfirmBtn').onclick = function() {
+    fetch(`/admin-panel/coupons/${pk}/delete/`, {
+      method: 'POST', headers: { 'X-CSRFToken': CSRF }
+    })
+    .then(r => r.json())
+    .then(d => {
+      if (d.success) {
+        document.getElementById('row-' + pk)?.remove();
+        closeModal('delModal');
+      }
+    });
+  };
+  openModal('delModal');
+}
+
+// ── Form submit ───────────────────────────────────────────────────
+document.getElementById('couponForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const form   = this;
+  const fd     = new FormData(form);
+  const errBox = document.getElementById('formErrors');
+  const errList= document.getElementById('errorList');
+
+  // clear previous errors
+  errBox.classList.remove('show');
+  errList.innerHTML = '';
+  form.querySelectorAll('.err').forEach(el => el.classList.remove('err'));
+
+  fetch(form.action, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF },
+    body: fd
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      location.reload();
+    } else if (d.errors) {
+      // show errors inside modal
+      d.errors.forEach(msg => {
+        const li = document.createElement('li');
+        li.textContent = msg;
+        errList.appendChild(li);
+      });
+      errBox.classList.add('show');
+      // scroll modal to top
+      form.closest('.modal').scrollTop = 0;
+    }
+  })
+  .catch(() => {
+    errList.innerHTML = '<li>Something went wrong. Please try again.</li>';
+    errBox.classList.add('show');
+  });
+});
+</script>
+{% endblock %}

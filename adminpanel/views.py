@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import get_user_model
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Q,Sum
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_protect
 from django.http import JsonResponse
@@ -14,10 +14,15 @@ from django.utils.text import slugify
 import json
 from django.views.decorators.http import require_POST, require_http_methods
 from django.views.decorators.csrf import csrf_exempt
-from products.models import Product, ProductVariant, VariantImage, Brand, Category,Occasion
+from products.models import Product, ProductVariant, VariantImage, Brand, Category,Occasion,Coupon
 from .forms import ProductForm, ProductVariantForm
 from django.shortcuts import render, get_object_or_404, redirect
 from django.core.paginator import Paginator
+from django.contrib.admin.views.decorators import staff_member_required
+from decimal import Decimal, InvalidOperation
+
+
+
 
 
 User = get_user_model()
@@ -838,7 +843,7 @@ def admin_order_status(request, order_id):
     if new_status not in valid_statuses:
         return JsonResponse({'error': 'Invalid status.'}, status=400)
 
-    # If cancelling from admin side, restore stock
+    
     if new_status == 'cancelled' and order.status not in ('cancelled', 'returned'):
         for item in order.items.filter(status='active'):
             if item.variant:
@@ -847,7 +852,7 @@ def admin_order_status(request, order_id):
             item.status = 'cancelled'
             item.save()
 
-    # If marking as returned, restore stock
+
     if new_status == 'returned' and order.status == 'return_requested':
         for item in order.items.filter(status='return_requested'):
             if item.variant:
@@ -936,3 +941,130 @@ def admin_update_stock(request, variant_id):
         'stock': variant.stock,
         'message': f'Stock updated to {variant.stock}.',
     })
+
+
+
+
+ 
+def _validate(data, pk=None):
+    errors = []
+ 
+    code = data.get('code', '').strip().upper()
+    if not code:
+        errors.append('Coupon code is required.')
+    elif len(code) < 3:
+        errors.append('Code must be at least 3 characters.')
+    else:
+        qs = Coupon.objects.filter(code__iexact=code)
+        if pk:
+            qs = qs.exclude(pk=pk)
+        if qs.exists():
+            errors.append(f'Code "{code}" already exists.')
+ 
+    dtype = data.get('discount_type', '')
+    if dtype not in ('percent', 'flat'):
+        errors.append('Please select a discount type.')
+ 
+    dval = data.get('discount_value', '').strip()
+    if not dval:
+        errors.append('Discount value is required.')
+    else:
+        try:
+            v = Decimal(dval)
+            if v <= 0:
+                errors.append('Discount value must be greater than 0.')
+            if dtype == 'percent' and v > 100:
+                errors.append('Percentage discount cannot exceed 100%.')
+        except InvalidOperation:
+            errors.append('Enter a valid number for discount value.')
+ 
+    vf = data.get('valid_from', '').strip()
+    vt = data.get('valid_to',   '').strip()
+    if not vf:
+        errors.append('"Valid From" date is required.')
+    if not vt:
+        errors.append('"Valid To" date is required.')
+    if vf and vt and vf >= vt:
+        errors.append('"Valid To" must be after "Valid From".')
+ 
+    raw_ul = data.get('usage_limit', '').strip()
+    if raw_ul:
+        try:
+            if int(raw_ul) < 1:
+                errors.append('Usage limit must be at least 1.')
+        except ValueError:
+            errors.append('Usage limit must be a whole number.')
+ 
+    return errors
+ 
+ 
+def _save_coupon(coupon, data):
+    coupon.code           = data['code'].strip().upper()
+    coupon.description    = data.get('description', '').strip()
+    coupon.discount_type  = data['discount_type']
+    coupon.discount_value = Decimal(data['discount_value'])
+    coupon.min_order      = Decimal(data.get('min_order') or '0')
+    coupon.max_discount   = Decimal(data['max_discount']) if data.get('max_discount', '').strip() else None
+    coupon.valid_from     = data['valid_from']
+    coupon.valid_to       = data['valid_to']
+    coupon.usage_limit    = int(data['usage_limit']) if data.get('usage_limit', '').strip() else None
+    coupon.per_user_limit = int(data.get('per_user_limit') or 1)
+    coupon.is_active      = data.get('is_active')  == 'on'
+    coupon.is_one_time    = data.get('is_one_time') == 'on'
+    coupon.save()
+    return coupon
+ 
+
+@staff_member_required
+def coupon_list(request):
+    qs = Coupon.objects.order_by('-created_at')
+    q  = request.GET.get('q', '').strip()
+    if q:
+        qs = qs.filter(Q(code__icontains=q) | Q(description__icontains=q))
+ 
+    paginator = Paginator(qs, 15)
+    page_obj  = paginator.get_page(request.GET.get('page'))
+ 
+    return render(request, 'adminpanel/coupons.html', {
+        'page_obj': page_obj,
+        'q': q,
+    })
+ 
+
+@staff_member_required
+@require_POST
+def coupon_create(request):
+    errors = _validate(request.POST)
+    if errors:
+        return JsonResponse({'success': False, 'errors': errors})
+ 
+    coupon = _save_coupon(Coupon(), request.POST)
+    return JsonResponse({'success': True, 'message': f'Coupon "{coupon.code}" created.'})
+ 
+
+@staff_member_required
+@require_POST
+def coupon_edit(request, pk):
+    coupon = get_object_or_404(Coupon, pk=pk)
+    errors = _validate(request.POST, pk=pk)
+    if errors:
+        return JsonResponse({'success': False, 'errors': errors})
+ 
+    coupon = _save_coupon(coupon, request.POST)
+    return JsonResponse({'success': True, 'message': f'Coupon "{coupon.code}" updated.'})
+ 
+
+@staff_member_required
+@require_POST
+def coupon_toggle(request, pk):
+    coupon           = get_object_or_404(Coupon, pk=pk)
+    coupon.is_active = not coupon.is_active
+    coupon.save(update_fields=['is_active', 'updated_at'])
+    return JsonResponse({'success': True, 'is_active': coupon.is_active, 'status': coupon.status})
+ 
+
+@staff_member_required
+@require_POST
+def coupon_delete(request, pk):
+    get_object_or_404(Coupon, pk=pk).delete()
+    return JsonResponse({'success': True})

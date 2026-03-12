@@ -1,0 +1,254 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Wishlist — ALAIA{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'orders/wishlist.css' %}">
+{% endblock %}
+
+
+{% block content %}
+<div class="wl-page">
+
+  <!-- Header -->
+  <div class="wl-header">
+    <div>
+      <div class="wl-eyebrow">Curated for you</div>
+      <h1 class="wl-title">My <em>Wishlist</em></h1>
+      <div class="wl-count">
+        <span class="wl-count-num" id="wlCount">{{ wishlist.items.count }}</span>
+        piece{{ wishlist.items.count|pluralize }} saved
+      </div>
+    </div>
+    <div class="wl-header-btns">
+      <a href="{% url 'orders:order_list' %}" class="wl-btn-outline">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+          <rect x="9" y="3" width="6" height="4" rx="1"/>
+        </svg>
+        My Orders
+      </a>
+      <a href="{% url 'products:product_list' %}" class="wl-btn-outline">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path d="M19 12H5m7-7-7 7 7 7"/>
+        </svg>
+        Continue Shopping
+      </a>
+    </div>
+  </div>
+
+  <!-- Grid -->
+  <div class="wl-grid" id="wlGrid">
+
+    {% if items %}
+      {% for item in items %}
+      {% with p=item.product %}
+      <div class="wl-card" id="wl-card-{{ p.id }}">
+
+        <!-- Image -->
+        <div class="wl-img-wrap">
+          <a href="{% url 'products:product_detail' p.slug %}">
+            {% with fv=p.variants.first %}
+              {% if fv and fv.images.first %}
+                <img class="wl-img" src="{{ fv.images.first.image.url }}" alt="{{ p.name }}" loading="lazy">
+              {% else %}
+                <div class="wl-no-img">
+                  <svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                  </svg>
+                </div>
+              {% endif %}
+            {% endwith %}
+          </a>
+
+          <!-- Badge -->
+          {% if p.id in in_cart %}
+            <span class="wl-badge wl-badge-in-cart">In Cart</span>
+          {% elif p.total_stock == 0 %}
+            <span class="wl-badge wl-badge-oos">Sold Out</span>
+          {% else %}
+            {% with fv=p.variants.first %}
+              {% if fv and fv.sales_price %}<span class="wl-badge wl-badge-sale">Sale</span>{% endif %}
+            {% endwith %}
+          {% endif %}
+
+          <!-- Heart remove -->
+          <button class="wl-heart-btn" onclick="removeItem({{ p.id }})" title="Remove from wishlist">
+            <svg width="15" height="15" viewBox="0 0 24 24">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="wl-body">
+          <div class="wl-brand">{{ p.brand.name }}</div>
+          <div class="wl-name"><a href="{% url 'products:product_detail' p.slug %}">{{ p.name }}</a></div>
+
+          {% with fv=p.variants.first %}
+          {% if fv %}
+          <div class="wl-prices">
+            {% if fv.sales_price %}
+              <span class="wl-price sale">₹{{ fv.sales_price|floatformat:0 }}</span>
+              <span class="wl-price-orig">₹{{ fv.price|floatformat:0 }}</span>
+              <span class="wl-disc">{{ fv.discount_percentage }}% off</span>
+            {% else %}
+              <span class="wl-price">₹{{ fv.price|floatformat:0 }}</span>
+            {% endif %}
+          </div>
+          {% endif %}
+          {% endwith %}
+
+          {% with stock=p.total_stock %}
+          <div class="wl-stock {% if stock == 0 %}out{% elif stock <= 5 %}low{% else %}in{% endif %}">
+            <span class="wl-sdot"></span>
+            {% if stock == 0 %}Out of stock
+            {% elif stock <= 5 %}Only {{ stock }} left
+            {% elif stock <= 10 %}Low stock
+            {% else %}In stock{% endif %}
+          </div>
+          {% endwith %}
+        </div>
+
+        <!-- Actions -->
+        <div class="wl-actions">
+          <button class="wl-btn wl-btn-cart"
+                  id="cart-btn-{{ p.id }}"
+                  onclick="moveToCart({{ p.id }}, this)"
+                  {% if p.total_stock == 0 %}disabled{% endif %}>
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+            </svg>
+            {% if p.id in in_cart %}In Cart{% else %}Move to Cart{% endif %}
+          </button>
+          <a href="{% url 'products:product_detail' p.slug %}" class="wl-btn wl-btn-view">View</a>
+        </div>
+
+      </div>
+      {% endwith %}
+      {% endfor %}
+
+    {% else %}
+    <div class="wl-empty">
+      <svg class="wl-empty-icon" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+      </svg>
+      <div class="wl-empty-title">Your wishlist is empty</div>
+      <div class="wl-empty-sub">
+        Save pieces that catch your eye.<br>They'll wait here until you're ready.
+      </div>
+      <a href="{% url 'products:product_list' %}" class="wl-empty-cta">Explore the Collection</a>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="wl-toast" id="wlToast">
+  <div class="wl-tdot"></div>
+  <span id="wlToastMsg"></span>
+</div>
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+(function(){
+'use strict';
+const CSRF = () => document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+// ── Remove ────────────────────────────────────────────────────────
+window.removeItem = function(pid) {
+  fetch(`{% url 'orders:remove_from_wishlist' 0 %}`.replace('/0/', `/${pid}/`), {
+    method: 'POST', headers: { 'X-CSRFToken': CSRF() }
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (!d.success) return;
+    const card = document.getElementById('wl-card-' + pid);
+    if (card) {
+      card.style.transition = 'opacity .3s, transform .3s';
+      card.style.opacity    = '0';
+      card.style.transform  = 'scale(.95)';
+      setTimeout(() => {
+        card.remove();
+        setCount(d.count);
+        if (d.count === 0) renderEmpty();
+      }, 300);
+    }
+    toast('Removed from wishlist');
+  })
+  .catch(() => toast('Something went wrong', true));
+};
+
+// ── Move to cart ──────────────────────────────────────────────────
+window.moveToCart = function(pid, btn) {
+  btn.disabled    = true;
+  const orig      = btn.innerHTML;
+  btn.textContent = '…';
+
+  fetch(`{% url 'orders:move_to_cart' 0 %}`.replace('/0/', `/${pid}/`), {
+    method: 'POST', headers: { 'X-CSRFToken': CSRF() }
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      toast('Moved to cart ✓');
+      if (window.updateCartBadge) window.updateCartBadge(d.cart_count);
+      const card = document.getElementById('wl-card-' + pid);
+      if (card) {
+        card.style.transition = 'opacity .3s, transform .3s';
+        card.style.opacity    = '0';
+        card.style.transform  = 'scale(.95)';
+        setTimeout(() => {
+          card.remove();
+          setCount(d.wish_count);
+          if (d.wish_count === 0) renderEmpty();
+        }, 300);
+      }
+    } else {
+      toast(d.error || 'Could not add to cart', true);
+      btn.disabled = false;
+      btn.innerHTML = orig;
+    }
+  })
+  .catch(() => { toast('Network error', true); btn.disabled = false; btn.innerHTML = orig; });
+};
+
+// ── Helpers ───────────────────────────────────────────────────────
+function setCount(n) {
+  const el = document.getElementById('wlCount');
+  if (el) el.textContent = n;
+}
+
+function renderEmpty() {
+  document.getElementById('wlGrid').innerHTML = `
+    <div class="wl-empty">
+      <svg class="wl-empty-icon" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+      </svg>
+      <div class="wl-empty-title">Your wishlist is empty</div>
+      <div class="wl-empty-sub">Save pieces that catch your eye.<br>They'll wait here until you're ready.</div>
+      <a href="{% url 'products:product_list' %}" class="wl-empty-cta">Explore the Collection</a>
+    </div>`;
+}
+
+let _timer;
+function toast(msg, err = false) {
+  const t = document.getElementById('wlToast');
+  const m = document.getElementById('wlToastMsg');
+  m.textContent = msg;
+  t.classList.toggle('error', err);
+  t.classList.add('show');
+  clearTimeout(_timer);
+  _timer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+})();
+</script>
+{% endblock %}

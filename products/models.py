@@ -302,22 +302,70 @@ class Review(models.Model):
         return f"{self.user} → {self.product.name} ({self.rating}★)"
 
 
-# ── COUPON ──────────────────────────────────────────────────────────
+
+    
+
 class Coupon(models.Model):
     DISCOUNT_TYPES = [
-        ('percent', 'Percentage'),
-        ('fixed',   'Fixed Amount'),
+        ('percent', 'Percentage (%)'),
+        ('flat',    'Flat Amount (Rs.)'),
     ]
 
     code           = models.CharField(max_length=50, unique=True)
+    description    = models.TextField(blank=True)
     discount_type  = models.CharField(max_length=10, choices=DISCOUNT_TYPES, default='percent')
     discount_value = models.DecimalField(max_digits=10, decimal_places=2)
+    max_discount   = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    min_order      = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     valid_from     = models.DateTimeField()
     valid_to       = models.DateTimeField()
+    usage_limit    = models.PositiveIntegerField(null=True, blank=True)
+    used_count     = models.PositiveIntegerField(default=0)
+    per_user_limit = models.PositiveIntegerField(default=1)
+    is_one_time    = models.BooleanField(default=False)
     is_active      = models.BooleanField(default=True)
     products       = models.ManyToManyField(Product,  blank=True, related_name='coupons')
     categories     = models.ManyToManyField(Category, blank=True, related_name='coupons')
-    min_order      = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    created_at     = models.DateTimeField(auto_now_add=True)
+    updated_at     = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
 
     def __str__(self):
         return self.code
+
+    @property
+    def status(self):
+        now = timezone.now()
+        if not self.is_active:
+            return 'inactive'
+        if self.valid_from > now:
+            return 'scheduled'
+        if self.valid_to < now:
+            return 'expired'
+        if self.usage_limit and self.used_count >= self.usage_limit:
+            return 'exhausted'
+        return 'active'
+
+    @property
+    def is_valid(self):
+        return self.status == 'active'
+
+    def compute_discount(self, subtotal):
+        subtotal = float(subtotal)
+        if subtotal <= 0:
+            return 0.0
+        if self.discount_type == 'percent':
+            disc = subtotal * float(self.discount_value) / 100
+            if self.max_discount:
+                disc = min(disc, float(self.max_discount))
+        else:
+            disc = float(self.discount_value)
+        return round(min(disc, subtotal), 2)
+
+    @property
+    def usage_percent(self):
+        if not self.usage_limit:
+            return 0
+        return min(round(self.used_count / self.usage_limit * 100), 100)

@@ -12,7 +12,7 @@ from django.utils import timezone
 import json
 from .models import ( Product, ProductVariant, VariantImage,Review, Coupon, Category)
 from django.contrib import messages
-from .models import Cart, CartItem, ProductVariant
+
 
 
 COLOR_MAP = {
@@ -373,6 +373,7 @@ def submit_review(request, product_id):
 
     except (ValueError, KeyError, json.JSONDecodeError):
         return JsonResponse({'error': 'Invalid request data.'}, status=400)
+    
 
 
 
@@ -388,100 +389,6 @@ def submit_review(request, product_id):
 
 
 
-
-
-
-def add_to_cart(request, variant_id):
-
-    if not request.user.is_authenticated:
-        messages.error(request, "Please login first.")
-        return redirect("account_login")
-
-    variant = get_object_or_404(ProductVariant, id=variant_id, is_deleted=False)
-
-    # Stock check
-    if variant.stock <= 0:
-        messages.error(request, "This product is out of stock.")
-        return redirect(request.META.get("HTTP_REFERER", "/"))
-
-    cart = Cart.objects.get(user=request.user)
-
-    cart_item, created = CartItem.objects.get_or_create(
-        cart=cart,
-        variant=variant,
-        defaults={
-            "quantity": 1,
-            "price_at_added": variant.final_price
-        }
-    )
-
-    if not created:
-     
-        if cart_item.quantity + 1 > variant.stock:
-            messages.error(request, "Not enough stock available.")
-        else:
-            cart_item.quantity += 1
-            cart_item.save()
-            messages.success(request, "Quantity updated in cart.")
-    else:
-        messages.success(request, "Product added to cart.")
-
-    return redirect(request.META.get("HTTP_REFERER", "/"))
-
-
-from django.shortcuts import render
-from .models import Cart
-
-
-def cart_view(request):
-
-    if not request.user.is_authenticated:
-        return redirect("account_login")
-
-    cart = Cart.objects.get(user=request.user)
-
-    items = cart.items.select_related("variant", "variant__product")
-
-    total = 0
-
-    for item in items:
-        total += item.subtotal()
-
-    context = {
-        "cart": cart,
-        "items": items,
-        "total": total,
-    }
-
-    return render(request, "cart/cart.html", context)
-
-
-
-from django.db import transaction
-
-
-@transaction.atomic
-def update_cart_quantity(request, item_id, action):
-
-    cart_item = get_object_or_404(CartItem, id=item_id, cart__user=request.user)
-
-    variant = cart_item.variant
-
-    if action == "increase":
-        if cart_item.quantity + 1 > variant.stock:
-            messages.error(request, "Not enough stock available.")
-        else:
-            cart_item.quantity += 1
-            cart_item.save()
-
-    elif action == "decrease":
-        if cart_item.quantity > 1:
-            cart_item.quantity -= 1
-            cart_item.save()
-        else:
-            cart_item.delete()
-
-    return redirect("cart")
 
 
 

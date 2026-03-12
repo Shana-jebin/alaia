@@ -488,8 +488,8 @@
 {% endif %}{# end product available check #}
 {% endblock %}
 
-
 {% block extra_js %}
+{{ block.super }}
 <script>
 (function(){
 'use strict';
@@ -599,24 +599,67 @@ window.onSizeChange = function(input, variantId){
   fetchVariant(variantId);
 };
 
-/* ── ADD TO CART ────────────────────────────────────────────────── */
+
 window.addToCart = function(){
+
   const sizeInput = document.querySelector('input[name="pd_size"]:checked');
-  if(document.querySelectorAll('input[name="pd_size"]').length > 0 && !sizeInput){
+
+  if(!sizeInput){
     showToast('Please select a size first', true);
     return;
   }
-  // Integrate with your cart backend here
-  showToast('Added to your collection');
+
+  const variantId = sizeInput.closest('.pd-size-wrap').dataset.variantId;
+
+ fetch(`/orders/add-to-cart/${variantId}/`, {
+    method: "POST",
+    headers: {
+        "X-CSRFToken": CSRF(),
+        "X-Requested-With": "XMLHttpRequest"
+    }
+})
+  .then(res => {
+      if(res.ok){
+          showToast("Added to your collection");
+      } else {
+          showToast("Could not add to cart", true);
+      }
+  })
+  .catch(() => showToast("Something went wrong", true));
+
 };
 
-/* ── WISHLIST ───────────────────────────────────────────────────── */
 window.toggleWishlist = function(productId){
-  const btn = document.getElementById('wishlistBtn');
-  if(!btn) return;
-  const active = btn.classList.toggle('active');
-  showToast(active ? 'Saved to wishlist' : 'Removed from wishlist');
-  // fetch(`/wishlist/toggle/${productId}/`, { method:'POST', headers:{'X-CSRFToken':CSRF()} });
+
+  const btn = document.getElementById("wishlistBtn");
+
+  fetch(`/orders/wishlist/toggle/${productId}/`, {
+      method: "POST",
+      headers: {
+          "X-CSRFToken": CSRF(),
+          "X-Requested-With": "XMLHttpRequest"
+      }
+  })
+  .then(res => res.json())
+  .then(data => {
+
+      if(data.success){
+
+          if(data.added){
+              btn.classList.add("active");
+              showToast("Saved to wishlist");
+          }else{
+              btn.classList.remove("active");
+              showToast("Removed from wishlist");
+          }
+
+      }else{
+          showToast("Could not update wishlist", true);
+      }
+
+  })
+  .catch(() => showToast("Something went wrong", true));
+
 };
 
 /* ── COUPON COPY ────────────────────────────────────────────────── */
@@ -669,7 +712,7 @@ window.submitReview = function(productId){
   const text = document.getElementById('reviewText')?.value?.trim();
   if(!pickedRating){ msg.textContent = 'Please select a star rating.'; msg.className = 'pd-form-msg error'; return; }
   if(!text || text.length < 10){ msg.textContent = 'Review must be at least 10 characters.'; msg.className = 'pd-form-msg error'; return; }
-  fetch(`/products/api/review/${productId}/`, {
+  fetch(`/orders/api/review/${productId}/`, {
     method: 'POST',
     headers: {'Content-Type':'application/json','X-CSRFToken':CSRF()},
     body: JSON.stringify({ rating: pickedRating, comment: text }),

@@ -5,7 +5,7 @@
 
 {% block extra_css %}
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
-
+<link rel="stylesheet" href="{% static 'orders/cart.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -149,21 +149,20 @@ function showToast(msg) {
 }
 
 function updateQty(itemId, action) {
-  fetch(`/products/cart/update/${itemId}/${action}/`, {
+  fetch(`/orders/cart/update/${itemId}/${action}/`, {
     method: 'GET',
     headers: { 'X-Requested-With': 'XMLHttpRequest' }
   }).then(() => {
     window.location.reload();
   }).catch(() => showToast('Error updating quantity'));
 }
-
 function removeItem(itemId) {
   const el = document.getElementById('item-' + itemId);
   el.classList.add('removing');
-  fetch(`/products/cart/update/${itemId}/decrease/`, {
+
+  fetch(`/orders/cart/update/${itemId}/remove/`, {
     method: 'GET',
   }).then(() => {
-    // If quantity was 1, item is deleted. Reload.
     setTimeout(() => window.location.reload(), 300);
   });
 }

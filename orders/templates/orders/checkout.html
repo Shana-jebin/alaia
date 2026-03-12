@@ -5,7 +5,7 @@
 
 {% block extra_css %}
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
-
+<link rel="stylesheet" href="{% static 'orders/checkout.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -49,7 +49,7 @@
         </div>
         {% endif %}
 
-        <a href="{% url 'add_address' %}?next={% url 'orders:checkout' %}" class="btn-add-addr">
+        <a href="{% url 'add_address' %}?next=/orders/checkout/" class="btn-add-addr">
           <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
           </svg>

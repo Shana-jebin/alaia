@@ -64,10 +64,10 @@ active{% endif %}">
             <span class="icon">%</span>
             <span>Offers</span>
           </a>
-          <a href="#" class="nav-item">
-            <span class="icon">🎫</span>
-            <span>Coupons</span>
-          </a>
+          <a href="{% url 'admin_coupon_list' %}" class="nav-item {% if 'coupons' in request.path %}active{% endif %}">
+    <span class="icon">🎫</span>
+    <span>Coupons</span>
+</a>
           <a href="#" class="nav-item">
             <span class="icon">💳</span>
             <span>Payments</span>

@@ -6,12 +6,12 @@ from django.views.decorators.http import require_POST
 from django.db import transaction
 from django.utils import timezone
 from django.db.models import Q
-
 from products.models import Cart, CartItem, Coupon
 from accounts.models import Address
 from .models import Order, OrderItem
-
+from products.models import Cart, CartItem, ProductVariant, Coupon
 import json
+from .models import WishlistItem
 
 
 @login_required
@@ -48,6 +48,9 @@ def checkout(request):
     total = subtotal + shipping
 
     addresses = Address.objects.filter(user=request.user).order_by('-is_default', '-created_at')
+    if addresses.count() < 2:
+        messages.error(request, "Please add at least 2 delivery addresses before checkout.")
+        return redirect('address_list')
     default_address = addresses.filter(is_default=True).first() or addresses.first()
 
     now = timezone.now()
@@ -186,7 +189,7 @@ def order_list(request):
     status_filter = request.GET.get('status', '')
     if status_filter:
         orders = orders.filter(status=status_filter)
-    return render(request, 'orders/order_list.html', {
+    return render(request, 'orders/order-list.html', {
         'orders': orders.order_by('-created_at'),
         'q': q, 'status_filter': status_filter,
         'status_choices': Order.STATUS_CHOICES,
@@ -378,3 +381,199 @@ def download_invoice(request, order_id):
 
     except ImportError:
         return HttpResponse(f"PDF generation requires reportlab.\nRun: pip install reportlab\n\nOrder: {order.order_id}", content_type='text/plain')
+
+
+
+from products.models import Product
+from .models import Wishlist, WishlistItem
+
+
+def _wishlist(user):
+    wishlist, _ = Wishlist.objects.get_or_create(user=user)
+    return wishlist
+
+
+@login_required
+def wishlist_page(request):
+    wishlist = _wishlist(request.user)
+    items    = wishlist.items.select_related(
+        'product', 'product__brand', 'product__category'
+    ).prefetch_related('product__variants__images')
+
+    in_cart = set()
+    try:
+        in_cart = set(request.user.cart.items.values_list('variant__product_id', flat=True))
+    except Exception:
+        pass
+
+    return render(request, 'orders/wishlist.html', {
+        'wishlist': wishlist,
+        'items':    items,
+        'in_cart':  in_cart,
+    })
+
+
+# ── Toggle (AJAX POST) ────────────────────────────────────────────
+@login_required
+@require_POST
+def toggle_wishlist(request, product_id):
+    product  = get_object_or_404(Product, id=product_id, is_active=True, is_deleted=False)
+    wishlist = _wishlist(request.user)
+
+    cart = Cart.objects.filter(user=request.user).first()
+    if cart and cart.items.filter(variant__product=product).exists():
+        return JsonResponse({
+            'success': False,
+            'message': 'Product already in cart.'
+        })
+
+    item = WishlistItem.objects.filter(wishlist=wishlist, product=product).first()
+
+    if item:
+        item.delete()
+        added = False
+    else:
+        WishlistItem.objects.create(wishlist=wishlist, product=product)
+        added = True
+
+    return JsonResponse({
+        'success': True,
+        'added': added,
+        'count': wishlist.items.count(),
+        'message': 'Saved to wishlist' if added else 'Removed from wishlist',
+    })
+
+@login_required
+def wishlist_status(request):
+    wishlist = _wishlist(request.user)
+    ids      = list(wishlist.items.values_list('product_id', flat=True))
+    return JsonResponse({'product_ids': ids, 'count': len(ids)})
+
+
+
+@login_required
+@require_POST
+def move_to_cart(request, product_id):
+    product  = get_object_or_404(Product, id=product_id, is_active=True, is_deleted=False)
+    wishlist = _wishlist(request.user)
+
+    variant = product.variants.filter(is_deleted=False, stock__gt=0).order_by('price').first()
+    if not variant:
+        return JsonResponse({'error': 'No stock available for this product.'}, status=400)
+
+    cart, _ = Cart.objects.get_or_create(user=request.user)
+    cart_item, created = CartItem.objects.get_or_create(
+        cart=cart, variant=variant,
+        defaults={'quantity': 1, 'price_at_added': variant.final_price}
+    )
+    if not created:
+        if cart_item.quantity + 1 > variant.stock:
+            return JsonResponse({'error': 'Not enough stock.'}, status=400)
+        cart_item.quantity += 1
+        cart_item.price_at_added = variant.final_price
+        cart_item.save()
+
+    WishlistItem.objects.filter(wishlist=wishlist, product=product).delete()
+
+    return JsonResponse({
+        'success':    True,
+        'message':    'Moved to cart.',
+        'cart_count': cart.items.count(),
+        'wish_count': wishlist.items.count(),
+    })
+
+
+@login_required
+@require_POST
+def remove_from_wishlist(request, product_id):
+    wishlist = _wishlist(request.user)
+    WishlistItem.objects.filter(wishlist=wishlist, product_id=product_id).delete()
+    return JsonResponse({'success': True, 'count': wishlist.items.count()})
+
+
+
+
+@require_POST
+def add_to_cart(request, variant_id):
+
+    if not request.user.is_authenticated:
+        return JsonResponse({"success": False, "error": "login required"})
+
+    variant = get_object_or_404(ProductVariant, id=variant_id, is_deleted=False)
+
+    if variant.stock <= 0:
+        return JsonResponse({"success": False, "error": "out of stock"})
+
+    cart, created = Cart.objects.get_or_create(user=request.user)
+
+    cart_item, created = CartItem.objects.get_or_create(
+        cart=cart,
+        variant=variant,
+        defaults={
+            "quantity": 1,
+            "price_at_added": variant.final_price
+        }
+    )
+
+    if not created:
+        if cart_item.quantity + 1 > variant.stock:
+            return JsonResponse({"success": False, "error": "not enough stock"})
+        cart_item.quantity += 1
+        cart_item.save()
+
+    WishlistItem.objects.filter(
+        wishlist__user=request.user,
+        product=variant.product
+    ).delete()
+
+    return JsonResponse({"success": True})
+
+def cart_view(request):
+
+    if not request.user.is_authenticated:
+        return redirect("account_login")
+
+    cart, created = Cart.objects.get_or_create(user=request.user)
+
+    items = cart.items.select_related("variant", "variant__product")
+
+    total = 0
+
+    for item in items:
+        total += item.subtotal()
+
+    context = {
+        "cart": cart,
+        "items": items,
+        "total": total,
+    }
+
+    return render(request, "orders/cart.html", context)
+
+
+
+
+def update_cart_quantity(request, item_id, action):
+
+    cart_item = get_object_or_404(CartItem, id=item_id, cart__user=request.user)
+
+    variant = cart_item.variant
+
+    if action == "increase":
+        if cart_item.quantity + 1 > variant.stock:
+            messages.error(request, "Not enough stock available.")
+        else:
+            cart_item.quantity += 1
+            cart_item.save()
+
+    elif action == "decrease":
+        if cart_item.quantity > 1:
+            cart_item.quantity -= 1
+            cart_item.save()
+        else:
+            cart_item.delete()
+
+    elif action == "remove":
+        cart_item.delete()
+
+    return redirect("orders:cart")

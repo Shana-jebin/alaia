@@ -15,7 +15,7 @@
 
 {% block content %}
 
-<!-- ── PAGE HEADER ──────────────────────────────────────── -->
+
 <div class="page-header">
   <div>
     <div class="breadcrumb">
@@ -398,6 +398,7 @@
 
 
 {% block extra_js %}
+{{ block.super }}
 <script>
 (function () {
 
@@ -487,23 +488,41 @@
       listViewBtn.classList.add('active'); gridViewBtn.classList.remove('active');
     });
   }
+window.toggleWishlist = function(btn, productId){
 
-  // Wishlist
-  window.toggleWishlist = function (btn, productId) {
-    const isActive = btn.dataset.wishlisted === '1';
-    btn.dataset.wishlisted = isActive ? '0' : '1';
-    const path = btn.querySelector('path');
-    if (path) {
-      path.style.fill   = isActive ? 'none' : '#c9a96e';
-      path.style.stroke = isActive ? 'currentColor' : '#c9a96e';
+    fetch(`/orders/wishlist/toggle/${productId}/`,{
+    method:"POST",
+    headers:{
+        "X-CSRFToken": document.cookie.match(/csrftoken=([^;]+)/)[1]
     }
-    btn.style.color = isActive ? '' : '#c9a96e';
-    // fetch(`/wishlist/toggle/${productId}/`, {
-    //   method: 'POST',
-    //   headers: { 'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1] }
-    // })
-  };
+})
+.then(res => {
+    if (res.redirected) {
+        window.location.href = res.url
+        return
+    }
+    return res.json()
+})
+.then(data=>{
+    if(!data) return;
 
+    if(!data.success){
+        showToast(data.message);
+        return;
+    }
+
+    const path = btn.querySelector("path");
+
+    if(data.added){
+        path.style.fill = "#c9a96e";
+        path.style.stroke = "#c9a96e";
+    }else{
+        path.style.fill = "none";
+        path.style.stroke = "currentColor";
+    }
+});
+
+}
 })();
 </script>
 {% endblock %}
