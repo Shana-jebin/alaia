@@ -293,6 +293,7 @@ class Review(models.Model):
     comment     = models.TextField()
     is_approved = models.BooleanField(default=False)
     created_at  = models.DateTimeField(auto_now_add=True)
+    is_rejected = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ('product', 'user')

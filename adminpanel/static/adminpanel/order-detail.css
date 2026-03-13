@@ -1,40 +1,346 @@
+/* ============================================================
+   ALAIA Admin — Order Detail CSS
+   Full dark theme matching dashboard exactly
+   ============================================================ */
 
-.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
-.back-link{color:#8a8480;font-size:11px;letter-spacing:.08em;text-transform:uppercase;text-decoration:none;display:flex;align-items:center;gap:6px;transition:color .2s;}
-.back-link:hover{color:#c9a96e;}
-.od-grid{display:grid;grid-template-columns:1fr 300px;gap:24px;align-items:start;}
-.panel{background:#2a2520;border:1px solid rgba(201,184,168,.12);padding:22px;margin-bottom:16px;}
-.panel-title{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#8a8480;margin-bottom:16px;}
-.od-id{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;color:#f0ece6;margin-bottom:4px;}
-.od-date{font-size:11px;color:#8a8480;}
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
-.status-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;font-size:9px;letter-spacing:.12em;text-transform:uppercase;}
-.sdot{width:6px;height:6px;border-radius:50%;}
-.sb-pending{background:#332d1a;color:#c9a96e;} .sb-pending .sdot{background:#c9a96e;}
-.sb-confirmed{background:#1a2a33;color:#64b5f6;} .sb-confirmed .sdot{background:#64b5f6;}
-.sb-shipped{background:#1a1a33;color:#9fa8da;} .sb-shipped .sdot{background:#9fa8da;}
-.sb-out_for_delivery{background:#1a2e1a;color:#81c784;} .sb-out_for_delivery .sdot{background:#81c784;}
-.sb-delivered{background:#1a2a1a;color:#4caf50;} .sb-delivered .sdot{background:#4caf50;}
-.sb-cancelled{background:#2e1a1a;color:#ef9a9a;} .sb-cancelled .sdot{background:#ef9a9a;}
-.sb-return_requested{background:#2e251a;color:#ffcc80;} .sb-return_requested .sdot{background:#ffcc80;}
-.sb-returned{background:#222;color:#888;} .sb-returned .sdot{background:#888;}
+body {
+  background-color: #000000;
+  color: #ffffff;
+  font-family: 'Segoe UI', sans-serif;
+  min-height: 100vh;
+}
 
-.item-row{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid rgba(201,184,168,.08);}
-.item-img{width:56px;height:70px;background:#1e1b18;overflow:hidden;flex-shrink:0;}
-.item-img img{width:100%;height:100%;object-fit:cover;}
-.item-info{flex:1;}
-.item-name{font-size:14px;color:#f0ece6;margin-bottom:2px;}
-.item-meta{font-size:10px;color:#8a8480;}
-.item-price{font-size:13px;font-weight:600;color:#c9a96e;}
+.main-content {
+  background-color: #000000 !important;
+}
 
-.sum-row{display:flex;justify-content:space-between;font-size:11px;color:#8a8480;margin-bottom:8px;}
-.sum-row.grand{border-top:1px solid rgba(201,184,168,.1);padding-top:12px;margin-top:4px;font-size:14px;color:#f0ece6;}
-.addr-text{font-size:11px;color:#c0b8b0;line-height:1.8;}
+/* ---------- Page Header ---------- */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
 
-.status-select{background:#1e1b18;border:1px solid rgba(201,184,168,.15);color:#f0ece6;padding:10px 14px;font-size:12px;width:100%;outline:none;font-family:inherit;cursor:pointer;margin-bottom:10px;}
-.status-select:focus{border-color:#c9a96e;}
-.btn-update{width:100%;background:#c9a96e;color:#1e1b18;border:none;cursor:pointer;padding:12px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;transition:background .2s;}
-.btn-update:hover{background:#b8945a;}
-.update-msg{font-size:11px;margin-top:8px;}
-.update-msg.ok{color:#4caf50;}
-.update-msg.err{color:#ef9a9a;}
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #555555;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  letter-spacing: 0.3px;
+  transition: color 0.2s;
+}
+
+.back-link:hover {
+  color: #ff3333;
+}
+
+/* ---------- Grid Layout ---------- */
+.od-grid {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 20px;
+  align-items: start;
+}
+
+/* ---------- Panel ---------- */
+.panel {
+  background: #111111;
+  border: 1px solid #1e1e1e;
+  border-radius: 8px;
+  padding: 22px 24px;
+  margin-bottom: 16px;
+  transition: border-color 0.2s;
+}
+
+.panel:hover {
+  border-color: #2a2a2a;
+}
+
+.panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #555555;
+  margin-bottom: 18px;
+}
+
+/* ---------- Order ID & Date ---------- */
+.od-id {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 4px;
+  letter-spacing: -0.3px;
+}
+
+.od-date {
+  font-size: 12px;
+  color: #555555;
+}
+
+/* ---------- Status Badges ---------- */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+.sdot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sb-pending           { background: rgba(249,115,22,0.1);   color: #f97316; border-color: rgba(249,115,22,0.3); }
+.sb-pending .sdot           { background: #f97316; }
+
+.sb-confirmed         { background: rgba(59,130,246,0.1);   color: #3b82f6; border-color: rgba(59,130,246,0.3); }
+.sb-confirmed .sdot         { background: #3b82f6; }
+
+.sb-processing        { background: rgba(59,130,246,0.1);   color: #3b82f6; border-color: rgba(59,130,246,0.3); }
+.sb-processing .sdot        { background: #3b82f6; }
+
+.sb-shipped           { background: rgba(168,85,247,0.1);   color: #a855f7; border-color: rgba(168,85,247,0.3); }
+.sb-shipped .sdot           { background: #a855f7; }
+
+.sb-out_for_delivery  { background: rgba(74,222,128,0.1);   color: #4ade80; border-color: rgba(74,222,128,0.3); }
+.sb-out_for_delivery .sdot  { background: #4ade80; }
+
+.sb-delivered         { background: rgba(74,222,128,0.1);   color: #4ade80; border-color: rgba(74,222,128,0.3); }
+.sb-delivered .sdot         { background: #4ade80; }
+
+.sb-cancelled         { background: rgba(255,51,51,0.1);    color: #ff3333; border-color: rgba(255,51,51,0.3); }
+.sb-cancelled .sdot         { background: #ff3333; }
+
+.sb-return_requested  { background: rgba(249,115,22,0.1);   color: #f97316; border-color: rgba(249,115,22,0.3); }
+.sb-return_requested .sdot  { background: #f97316; }
+
+.sb-returned          { background: rgba(100,100,100,0.08); color: #777777; border-color: rgba(100,100,100,0.2); }
+.sb-returned .sdot          { background: #777777; }
+
+/* ---------- Order Items ---------- */
+.item-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.item-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.item-row:first-child {
+  padding-top: 0;
+}
+
+.item-img {
+  width: 52px;
+  height: 64px;
+  background: #1a1a1a;
+  border: 1px solid #222222;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.item-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.item-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 4px;
+}
+
+.item-meta {
+  font-size: 11px;
+  color: #555555;
+}
+
+.item-price {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+/* ---------- Customer & Address ---------- */
+.info-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #555555;
+  margin-bottom: 8px;
+}
+
+.info-value {
+  font-size: 13px;
+  color: #ffffff;
+  margin-bottom: 2px;
+  font-weight: 500;
+}
+
+.info-sub {
+  font-size: 11px;
+  color: #555555;
+}
+
+.addr-text {
+  font-size: 12px;
+  color: #aaaaaa;
+  line-height: 1.9;
+}
+
+.addr-text strong {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* ---------- Payment Summary ---------- */
+.sum-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #888888;
+  margin-bottom: 10px;
+}
+
+.sum-row span:last-child {
+  color: #cccccc;
+  font-weight: 500;
+}
+
+.sum-row.discount {
+  color: #4ade80;
+}
+
+.sum-row.discount span:last-child {
+  color: #4ade80;
+}
+
+.sum-row.grand {
+  border-top: 1px solid #1e1e1e;
+  padding-top: 14px;
+  margin-top: 6px;
+  margin-bottom: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.sum-row.grand span:last-child {
+  color: #ffffff;
+  font-size: 16px;
+}
+
+/* ---------- Status Update ---------- */
+.status-select {
+  background: #0d0d0d;
+  border: 1px solid #1e1e1e;
+  border-radius: 6px;
+  color: #ffffff;
+  padding: 10px 14px;
+  font-size: 13px;
+  width: 100%;
+  outline: none;
+  font-family: 'Segoe UI', sans-serif;
+  cursor: pointer;
+  margin-bottom: 12px;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23555' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  transition: border-color 0.2s;
+}
+
+.status-select:focus {
+  border-color: #ff3333;
+}
+
+.status-select option {
+  background: #111111;
+  color: #ffffff;
+}
+
+.btn-update {
+  width: 100%;
+  background: #ff3333;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 11px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  font-family: 'Segoe UI', sans-serif;
+  transition: opacity 0.2s, transform 0.15s;
+}
+
+.btn-update:hover {
+  opacity: 0.85;
+  transform: translateY(-1px);
+}
+
+.update-msg {
+  font-size: 12px;
+  margin-top: 10px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.update-msg.ok  { color: #4ade80; }
+.update-msg.err { color: #ff3333; }
+
+/* ---------- Divider ---------- */
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 900px) {
+  .od-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+}

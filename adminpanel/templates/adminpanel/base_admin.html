@@ -56,14 +56,15 @@ active{% endif %}">
             <span class="icon">🏢</span>
             <span>Brands</span>
           </a>
-          <a href="#" class="nav-item">
-            <span class="icon">📋</span>
-            <span>Orders</span>
-          </a>
-          <a href="#" class="nav-item">
-            <span class="icon">%</span>
-            <span>Offers</span>
-          </a>
+         <a href="{% url 'admin_order_list' %}" class="nav-item 
+{% if request.resolver_match.url_name == 'admin_order_list' or request.resolver_match.url_name == 'admin_order_detail' %}active{% endif %}">
+    <span class="icon">📋</span>
+    <span>Orders</span>
+</a>
+          <a href="{% url 'admin_inventory' %}" class="nav-item {% if 'inventory' in request.path %}active{% endif %}">
+  <span class="icon">📦</span>
+  <span>Inventory</span>
+</a>
           <a href="{% url 'admin_coupon_list' %}" class="nav-item {% if 'coupons' in request.path %}active{% endif %}">
     <span class="icon">🎫</span>
     <span>Coupons</span>
@@ -72,10 +73,10 @@ active{% endif %}">
             <span class="icon">💳</span>
             <span>Payments</span>
           </a>
-          <a href="#" class="nav-item">
-            <span class="icon">⭐</span>
-            <span>Reviews</span>
-          </a>
+          <a href="{% url 'admin_review_list' %}" class="nav-item {% if 'reviews' in request.path %}active{% endif %}">
+  <span class="icon">⭐</span>
+  <span>Reviews</span>
+</a>
           <a href="#" class="nav-item">
             <span class="icon">🎧</span>
             <span>Support</span>
@@ -83,11 +84,14 @@ active{% endif %}">
         </nav>
 
         <div class="sign-out">
-          <button class="sign-out-btn">
-            <span>→</span>
-            <span>Sign Out</span>
-          </button>
-        </div>
+  <form method="POST" action="{% url 'admin_logout' %}">
+    {% csrf_token %}
+    <button type="submit" class="sign-out-btn">
+      <span>→</span>
+      <span>Sign Out</span>
+    </button>
+  </form>
+</div>
       </aside>
 
       <!-- Main Content -->

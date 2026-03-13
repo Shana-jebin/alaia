@@ -1,15 +1,16 @@
-{% extends 'base.html' %}
+{% extends 'user_profile/base_profile.html' %}
 {% load static %}
 
 {% block title %}Order {{ order.order_id }} — ALAIA{% endblock %}
 
 {% block extra_css %}
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
-
+<link rel="stylesheet" href="{% static 'user_profile/profile.css' %}">
+<link rel="stylesheet" href="{% static 'orders/order-detail.css' %}">
 {% endblock %}
 
-{% block content %}
-<div class="od-wrap">
+{% block profile_content %}
+<div class="account-content">
 
   <a href="{% url 'orders:order_list' %}" class="od-back">
     ← Back to Orders
@@ -28,7 +29,7 @@
   </div>
 
   <!-- Progress tracker (only for active orders) -->
-  {% if order.status not in "cancelled,returned,return_requested" %}
+  {% if order.status != 'cancelled' and order.status != 'returned' and order.status != 'return_requested' %}
   <div class="progress-wrap">
     <div class="progress-title">Order Progress</div>
     <div class="progress-track">

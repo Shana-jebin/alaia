@@ -20,6 +20,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.core.paginator import Paginator
 from django.contrib.admin.views.decorators import staff_member_required
 from decimal import Decimal, InvalidOperation
+from products.models import Review  
 
 
 
@@ -804,7 +805,7 @@ def admin_order_list(request):
         'revenue':   all_orders.filter(status='delivered').aggregate(t=Sum('total'))['t'] or 0,
     }
 
-    return render(request, 'adminpanel/order_list.html', {
+    return render(request, 'adminpanel/order-list.html', {
         'page_obj': page_obj,
         'q': q,
         'status_filter': status_filter,
@@ -821,7 +822,7 @@ def admin_order_list(request):
 @user_passes_test(is_admin, login_url='admin_login')
 def admin_order_detail(request, order_id):
     order = get_object_or_404(Order, order_id=order_id)
-    return render(request, 'adminpanel/order_detail.html', {
+    return render(request, 'adminpanel/order-detail.html', {
         'order': order,
         'status_choices': Order.STATUS_CHOICES,
     })
@@ -876,8 +877,7 @@ def admin_order_status(request, order_id):
 @login_required
 @user_passes_test(is_admin, login_url='admin_login')
 def admin_inventory(request):
-    """Stock management view for admin."""
-    from products.models import Product, ProductVariant
+    
 
     variants = ProductVariant.objects.filter(
         is_deleted=False,
@@ -886,12 +886,15 @@ def admin_inventory(request):
     ).select_related('product', 'product__category', 'product__brand').order_by('stock')
 
     q = request.GET.get('q', '').strip()
+
     if q:
         variants = variants.filter(
-            Q(product__name__icontains=q) |
-            Q(product__brand__name__icontains=q) |
-            Q(product__category__name__icontains=q)
-        )
+            Q(product__name__istartswith=q) |
+            Q(product__brand__name__istartswith=q) |
+            Q(product__category__name__istartswith=q) |
+            Q(color__istartswith=q) |
+            Q(size__istartswith=q)
+        ).distinct()
 
     stock_filter = request.GET.get('stock', '')
     if stock_filter == 'out':
@@ -1068,3 +1071,96 @@ def coupon_toggle(request, pk):
 def coupon_delete(request, pk):
     get_object_or_404(Coupon, pk=pk).delete()
     return JsonResponse({'success': True})
+
+
+
+
+
+
+
+
+
+@staff_member_required
+def review_list(request):
+
+    status_filter = request.GET.get('status', 'all')
+    search_query  = request.GET.get('q', '').strip()
+
+    reviews = (
+        Review.objects
+        .select_related('product', 'product__category', 'user')
+        .prefetch_related('product__variants__images')
+        .order_by('-created_at')
+    )
+
+ 
+    if status_filter == 'pending':
+        reviews = reviews.filter(is_approved=False, is_rejected=False)
+    elif status_filter == 'approved':
+        reviews = reviews.filter(is_approved=True)
+    elif status_filter == 'rejected':
+        reviews = reviews.filter(is_rejected=True)
+
+    if search_query:
+        reviews = reviews.filter(
+            Q(product__name__icontains=search_query) |
+            Q(user__first_name__icontains=search_query) |
+            Q(user__last_name__icontains=search_query) |
+            Q(user__username__icontains=search_query) |
+            Q(comment__icontains=search_query)
+        )
+
+  
+    all_reviews   = Review.objects.all()
+    pending_count  = all_reviews.filter(is_approved=False, is_rejected=False).count()
+    approved_count = all_reviews.filter(is_approved=True).count()
+    rejected_count = all_reviews.filter(is_rejected=True).count()
+
+    paginator = Paginator(reviews, 15)
+    page      = paginator.get_page(request.GET.get('page', 1))
+
+    return render(request, 'adminpanel/review-list.html', {
+        'reviews':        page,
+        'status_filter':  status_filter,
+        'search_query':   search_query,
+        'pending_count':  pending_count,
+        'approved_count': approved_count,
+        'rejected_count': rejected_count,
+    })
+
+
+@staff_member_required
+@require_POST
+def review_approve(request, review_id):
+    review = get_object_or_404(Review, id=review_id)
+    review.is_approved = True
+    review.is_rejected = False
+    review.save()
+    return JsonResponse({'success': True, 'message': 'Review approved.'})
+
+
+@staff_member_required
+@require_POST
+def review_reject(request, review_id):
+    review = get_object_or_404(Review, id=review_id)
+    review.is_approved = False
+    review.is_rejected = True
+    review.save()
+    return JsonResponse({'success': True, 'message': 'Review rejected.'})
+
+
+@staff_member_required
+@require_POST
+def review_delete(request, review_id):
+
+    review = get_object_or_404(Review, id=review_id)
+    review.delete()
+    return JsonResponse({'success': True, 'message': 'Review deleted.'})
+
+
+
+
+
+def admin_logout(request):
+    logout(request)
+    return redirect('admin_login')

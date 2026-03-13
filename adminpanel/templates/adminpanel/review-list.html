@@ -1,0 +1,312 @@
+{% extends 'adminpanel/base_admin.html' %}
+{% load static %}
+
+{% block page_title %}Reviews{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'adminpanel/review-list.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="rv-header">
+  <div>
+    <h1 class="rv-title">Customer Reviews</h1>
+    <p class="rv-subtitle">Approve or reject reviews before they appear on the storefront</p>
+  </div>
+  <div class="rv-stats-pills">
+    <span class="rv-pill pill-pending">{{ pending_count }} Pending</span>
+    <span class="rv-pill pill-approved">{{ approved_count }} Approved</span>
+    <span class="rv-pill pill-rejected">{{ rejected_count }} Rejected</span>
+  </div>
+</div>
+
+<!-- Filter bar -->
+<div class="rv-filter-bar">
+  <form method="get" class="rv-filter-form">
+    <div class="rv-filter-tabs">
+      <a href="?status=all{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
+         class="rv-tab {% if status_filter == 'all' or not status_filter %}active{% endif %}">All</a>
+      <a href="?status=pending{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
+         class="rv-tab {% if status_filter == 'pending' %}active{% endif %}">Pending</a>
+      <a href="?status=approved{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
+         class="rv-tab {% if status_filter == 'approved' %}active{% endif %}">Approved</a>
+      <a href="?status=rejected{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
+         class="rv-tab {% if status_filter == 'rejected' %}active{% endif %}">Rejected</a>
+    </div>
+    <div class="rv-search-wrap">
+      <input type="hidden" name="status" value="{{ status_filter|default:'all' }}">
+      <input type="text" name="q" value="{{ search_query }}"
+             class="rv-search" placeholder="Search product or reviewer…">
+      <button type="submit" class="rv-search-btn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- Reviews table -->
+<div class="table-card">
+  <table class="rv-table">
+    <thead>
+      <tr>
+        <th>Product</th>
+        <th>Reviewer</th>
+        <th>Rating</th>
+        <th>Comment</th>
+        <th>Date</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for review in reviews %}
+      <tr class="rv-row" id="row-{{ review.id }}">
+        <td>
+          <div class="rv-product">
+            {% if review.product.variants.first.images.first %}
+              <img src="{{ review.product.variants.first.images.first.image.url }}"
+                   class="rv-product-img" alt="{{ review.product.name }}">
+            {% else %}
+              <div class="rv-product-img rv-product-img-placeholder">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
+                </svg>
+              </div>
+            {% endif %}
+            <div>
+              <div class="rv-product-name">{{ review.product.name }}</div>
+              <div class="rv-product-cat">{{ review.product.category.name }}</div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div class="rv-user-name">{{ review.user.get_full_name|default:review.user.username }}</div>
+          <div class="rv-user-email">{{ review.user.email }}</div>
+        </td>
+        <td>
+          <div class="rv-stars">
+            {% for i in "12345" %}
+              <svg width="12" height="12" viewBox="0 0 24 24"
+                   fill="{% if forloop.counter <= review.rating %}#f59e0b{% else %}none{% endif %}"
+                   stroke="#f59e0b" stroke-width="1.5">
+                <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
+              </svg>
+            {% endfor %}
+            <span class="rv-rating-num">{{ review.rating }}.0</span>
+          </div>
+        </td>
+        <td>
+          <div class="rv-comment-wrap">
+            <span class="rv-comment">{{ review.comment|truncatechars:80 }}</span>
+            {% if review.comment|length > 80 %}
+              <button class="rv-read-more" onclick="openModal({{ review.id }}, `{{ review.comment|escapejs }}`, `{{ review.product.name|escapejs }}`, `{{ review.user.get_full_name|default:review.user.username|escapejs }}`, {{ review.rating }})">Read more</button>
+            {% endif %}
+          </div>
+        </td>
+        <td>
+          <div class="rv-date">{{ review.created_at|date:"d M Y" }}</div>
+          <div class="rv-time">{{ review.created_at|date:"H:i" }}</div>
+        </td>
+        <td>
+          <span class="status-badge
+            {% if review.is_approved %}status-approved
+            {% elif review.is_rejected %}status-rejected
+            {% else %}status-pending{% endif %}"
+            id="status-{{ review.id }}">
+            {% if review.is_approved %}Approved
+            {% elif review.is_rejected %}Rejected
+            {% else %}Pending{% endif %}
+          </span>
+        </td>
+        <td>
+          <div class="rv-actions" id="actions-{{ review.id }}">
+            {% if not review.is_approved %}
+            <button class="rv-btn rv-btn-approve"
+                    onclick="reviewAction({{ review.id }}, 'approve')"
+                    title="Approve">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              Approve
+            </button>
+            {% endif %}
+            {% if not review.is_rejected %}
+            <button class="rv-btn rv-btn-reject"
+                    onclick="reviewAction({{ review.id }}, 'reject')"
+                    title="Reject">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+              Reject
+            </button>
+            {% endif %}
+            <button class="rv-btn rv-btn-delete"
+                    onclick="deleteReview({{ review.id }})"
+                    title="Delete">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+              </svg>
+            </button>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="7" class="rv-empty">
+          <svg width="40" height="40" fill="none" stroke="#333" stroke-width="1" viewBox="0 0 24 24">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <p>No reviews found</p>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Pagination -->
+{% if reviews.has_other_pages %}
+<div class="rv-pagination">
+  {% if reviews.has_previous %}
+    <a href="?page={{ reviews.previous_page_number }}&status={{ status_filter }}&q={{ search_query }}" class="rv-page-btn">← Prev</a>
+  {% endif %}
+  <span class="rv-page-info">Page {{ reviews.number }} of {{ reviews.paginator.num_pages }}</span>
+  {% if reviews.has_next %}
+    <a href="?page={{ reviews.next_page_number }}&status={{ status_filter }}&q={{ search_query }}" class="rv-page-btn">Next →</a>
+  {% endif %}
+</div>
+{% endif %}
+
+
+<!-- Full comment modal -->
+<div class="rv-modal-overlay" id="rvModal" onclick="closeModal(event)">
+  <div class="rv-modal">
+    <div class="rv-modal-header">
+      <div>
+        <div class="rv-modal-product" id="modalProduct"></div>
+        <div class="rv-modal-reviewer" id="modalReviewer"></div>
+      </div>
+      <button class="rv-modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="rv-modal-stars" id="modalStars"></div>
+    <div class="rv-modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="rv-toast" id="rvToast">
+  <span class="rv-toast-dot"></span>
+  <span id="rvToastMsg"></span>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+const CSRF = () => document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+function reviewAction(id, action) {
+  fetch(`/admin-panel/reviews/${id}/${action}/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF(), 'X-Requested-With': 'XMLHttpRequest' }
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      const badge = document.getElementById(`status-${id}`);
+      const actions = document.getElementById(`actions-${id}`);
+      if (action === 'approve') {
+        badge.textContent = 'Approved';
+        badge.className = 'status-badge status-approved';
+        actions.querySelector('.rv-btn-approve')?.remove();
+        // Add reject back if not there
+        if (!actions.querySelector('.rv-btn-reject')) {
+          const rb = document.createElement('button');
+          rb.className = 'rv-btn rv-btn-reject';
+          rb.title = 'Reject';
+          rb.innerHTML = `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Reject`;
+          rb.onclick = () => reviewAction(id, 'reject');
+          actions.insertBefore(rb, actions.querySelector('.rv-btn-delete'));
+        }
+      } else {
+        badge.textContent = 'Rejected';
+        badge.className = 'status-badge status-rejected';
+        actions.querySelector('.rv-btn-reject')?.remove();
+        if (!actions.querySelector('.rv-btn-approve')) {
+          const ab = document.createElement('button');
+          ab.className = 'rv-btn rv-btn-approve';
+          ab.title = 'Approve';
+          ab.innerHTML = `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Approve`;
+          ab.onclick = () => reviewAction(id, 'approve');
+          actions.insertBefore(ab, actions.querySelector('.rv-btn-delete'));
+        }
+      }
+      showToast(d.message);
+    } else {
+      showToast(d.error || 'Something went wrong', true);
+    }
+  })
+  .catch(() => showToast('Request failed', true));
+}
+
+function deleteReview(id) {
+  if (!confirm('Permanently delete this review?')) return;
+  fetch(`/admin-panel/reviews/${id}/delete/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF(), 'X-Requested-With': 'XMLHttpRequest' }
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      const row = document.getElementById(`row-${id}`);
+      row.style.opacity = '0';
+      row.style.transition = 'opacity 0.3s';
+      setTimeout(() => row.remove(), 300);
+      showToast('Review deleted');
+    } else {
+      showToast(d.error || 'Could not delete', true);
+    }
+  })
+  .catch(() => showToast('Request failed', true));
+}
+
+function openModal(id, comment, product, reviewer, rating) {
+  document.getElementById('modalProduct').textContent = product;
+  document.getElementById('modalReviewer').textContent = 'by ' + reviewer;
+  document.getElementById('modalBody').textContent = comment;
+  const starsEl = document.getElementById('modalStars');
+  starsEl.innerHTML = '';
+  for (let i = 1; i <= 5; i++) {
+    starsEl.innerHTML += `<svg width="16" height="16" viewBox="0 0 24 24"
+      fill="${i <= rating ? '#f59e0b' : 'none'}" stroke="#f59e0b" stroke-width="1.5">
+      <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
+    </svg>`;
+  }
+  document.getElementById('rvModal').classList.add('show');
+}
+
+function closeModal(e) {
+  if (!e || e.target.id === 'rvModal' || e.target.classList.contains('rv-modal-close')) {
+    document.getElementById('rvModal').classList.remove('show');
+  }
+}
+
+let toastTimer;
+function showToast(msg, isError = false) {
+  const t = document.getElementById('rvToast');
+  const m = document.getElementById('rvToastMsg');
+  m.textContent = msg;
+  t.style.borderColor = isError ? '#ef4444' : '#22c55e';
+  t.querySelector('.rv-toast-dot').style.background = isError ? '#ef4444' : '#22c55e';
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+{% endblock %}

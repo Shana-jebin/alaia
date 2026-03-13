@@ -1,0 +1,431 @@
+/* ============================================================
+   ALAIA Admin — Inventory CSS
+   Full dark theme matching dashboard exactly
+   ============================================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #000000;
+  color: #ffffff;
+  font-family: 'Segoe UI', sans-serif;
+  min-height: 100vh;
+}
+
+.main-content {
+  background-color: #000000 !important;
+}
+
+/* ---------- Header ---------- */
+.inv-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 28px;
+}
+
+.inv-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.3px;
+  margin-bottom: 5px;
+}
+
+.inv-sub {
+  font-size: 13px;
+  color: #555555;
+}
+
+/* ---------- Stats ---------- */
+.inv-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.inv-stat {
+  background: #111111;
+  border: 1px solid #1e1e1e;
+  border-radius: 8px;
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.inv-stat:hover {
+  border-color: #2a2a2a;
+  transform: translateY(-1px);
+}
+
+.inv-stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.inv-icon-total   { background: rgba(255,255,255,0.06); color: #888888; }
+.inv-icon-out     { background: rgba(255,51,51,0.12);   color: #ff3333; }
+.inv-icon-low     { background: rgba(251,191,36,0.12);  color: #fbbf24; }
+.inv-icon-ok      { background: rgba(74,222,128,0.12);  color: #4ade80; }
+
+.inv-stat-body { min-width: 0; }
+
+.inv-stat-label {
+  font-size: 11px;
+  color: #555555;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.inv-stat-val {
+  font-size: 24px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+
+/* ---------- Filter ---------- */
+.inv-filter-wrap {
+  background: #111111;
+  border: 1px solid #1e1e1e;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+}
+
+.inv-filter-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.inv-filter-field { display: flex; flex-direction: column; gap: 6px; }
+
+.inv-input-wrap { position: relative; }
+
+.inv-input-icon {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #444444;
+  pointer-events: none;
+}
+
+.inv-input {
+  background: #0d0d0d;
+  border: 1px solid #1e1e1e;
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 13px;
+  font-family: 'Segoe UI', sans-serif;
+  padding: 9px 13px 9px 34px;
+  outline: none;
+  min-width: 260px;
+  transition: border-color 0.2s;
+}
+
+.inv-input:focus { border-color: #ff3333; }
+.inv-input::placeholder { color: #333333; }
+
+/* Stock Pills */
+.inv-stock-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.inv-pill {
+  padding: 8px 14px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #555555;
+  text-decoration: none;
+  border: 1px solid #1e1e1e;
+  background: #0d0d0d;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.inv-pill:hover { color: #cccccc; border-color: #2a2a2a; }
+.inv-pill.active { background: #1e1e1e; color: #ffffff; border-color: #ff3333; }
+
+.inv-filter-actions { display: flex; gap: 8px; align-items: center; }
+
+.inv-btn-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 20px;
+  background: #ff3333;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: 'Segoe UI', sans-serif;
+  transition: opacity 0.2s;
+}
+
+.inv-btn-filter:hover { opacity: 0.85; }
+
+.inv-btn-clear {
+  padding: 9px 14px;
+  background: transparent;
+  border: 1px solid #1e1e1e;
+  border-radius: 6px;
+  color: #555555;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.inv-btn-clear:hover { border-color: #ff3333; color: #ff3333; }
+
+/* ---------- Table Card ---------- */
+.inv-card {
+  background: #111111;
+  border: 1px solid #1e1e1e;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.inv-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.inv-table th {
+  padding: 12px 18px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: #555555;
+  background: #111111;
+  border-bottom: 1px solid #1e1e1e;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.inv-table td {
+  padding: 14px 18px;
+  border-bottom: 1px solid #191919;
+  font-size: 13px;
+  color: #cccccc;
+  vertical-align: middle;
+}
+
+.inv-table tbody tr:last-child td { border-bottom: none; }
+.inv-table tbody tr:hover td { background: #141414; }
+
+/* ---------- Cells ---------- */
+.inv-pname {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 3px;
+}
+
+.inv-pmeta {
+  font-size: 11px;
+  color: #555555;
+}
+
+.inv-color {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: #aaaaaa;
+}
+
+.inv-color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.inv-size {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  background: #1a1a1a;
+  border: 1px solid #252525;
+  border-radius: 4px;
+  padding: 3px 9px;
+}
+
+.inv-price {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.inv-price-orig {
+  font-size: 11px;
+  color: #444444;
+  text-decoration: line-through;
+  margin-top: 2px;
+}
+
+/* Stock display */
+.inv-stock-val {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+
+.stock-out { color: #ff3333; }
+.stock-low { color: #fbbf24; }
+.stock-ok  { color: #4ade80; }
+
+.inv-stock-bar {
+  height: 4px;
+  background: #1a1a1a;
+  border-radius: 2px;
+  width: 80px;
+}
+
+.inv-stock-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s;
+}
+
+.inv-out-label {
+  font-size: 10px;
+  color: #ff3333;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+}
+
+/* Stock edit */
+.inv-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inv-stock-input {
+  background: #0d0d0d;
+  border: 1px solid #1e1e1e;
+  border-radius: 5px;
+  color: #ffffff;
+  padding: 7px 10px;
+  font-size: 13px;
+  font-family: 'Segoe UI', sans-serif;
+  width: 75px;
+  outline: none;
+  text-align: center;
+  transition: border-color 0.2s;
+}
+
+.inv-stock-input:focus { border-color: #ff3333; }
+
+.inv-btn-save {
+  background: transparent;
+  border: 1px solid #1e1e1e;
+  border-radius: 5px;
+  color: #ff3333;
+  padding: 7px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: 'Segoe UI', sans-serif;
+  transition: background 0.2s, border-color 0.2s;
+  white-space: nowrap;
+}
+
+.inv-btn-save:hover {
+  background: rgba(255,51,51,0.1);
+  border-color: rgba(255,51,51,0.4);
+}
+
+.inv-save-msg {
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 5px;
+}
+
+.inv-save-msg.ok  { color: #4ade80; }
+.inv-save-msg.err { color: #ff3333; }
+
+/* ---------- Pagination ---------- */
+.inv-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px 24px;
+  border-top: 1px solid #1a1a1a;
+}
+
+.inv-page-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 16px;
+  background: #0d0d0d;
+  border: 1px solid #1e1e1e;
+  border-radius: 5px;
+  color: #777777;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: border-color 0.2s, color 0.2s;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.inv-page-btn:hover { border-color: #ff3333; color: #ff3333; }
+
+.inv-page-info {
+  font-size: 12px;
+  color: #555555;
+}
+.inv-input-clear {
+  position: absolute;
+  right: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #444444;
+  font-size: 12px;
+  text-decoration: none;
+  transition: color 0.2s;
+  line-height: 1;
+}
+
+.inv-input-clear:hover { color: #ff3333; }
+/* ---------- Responsive ---------- */
+@media (max-width: 1200px) {
+  .inv-stats { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 900px) {
+  .inv-filter-row { flex-direction: column; align-items: stretch; }
+  .inv-input { min-width: 100%; }
+  .inv-stats { grid-template-columns: repeat(2, 1fr); }
+}

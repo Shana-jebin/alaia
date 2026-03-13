@@ -4,10 +4,10 @@
   --muted: #8a8480; --border: rgba(42,37,32,.12); --accent: #c9a96e;
   --red: #c0392b;
 }
-body { background: var(--cream); padding-top: 60px; }
+body { background: var(--cream);  }
 
 .od-wrap {
-  max-width: 880px; margin: 0 auto;
+  width: 100%;
   padding: 48px 24px 80px;
 }
 .od-back {
@@ -99,9 +99,9 @@ body { background: var(--cream); padding-top: 60px; }
 
 /* Grid layout */
 .od-grid {
-  display: grid;
-  grid-template-columns: 1fr 300px;
-  gap: 32px; align-items: start;
+    display: grid;
+    grid-template-columns: 1fr 350px;
+    gap: 40px;
 }
 
 /* Items */

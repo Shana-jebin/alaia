@@ -177,7 +177,7 @@ def place_order(request):
 @login_required
 def order_success(request, order_id):
     order = get_object_or_404(Order, order_id=order_id, user=request.user)
-    return render(request, 'orders/order_success.html', {'order': order})
+    return render(request, 'orders/order-success.html', {'order': order})
 
 
 @login_required
@@ -199,7 +199,7 @@ def order_list(request):
 @login_required
 def order_detail(request, order_id):
     order = get_object_or_404(Order, order_id=order_id, user=request.user)
-    return render(request, 'orders/order_detail.html', {'order': order})
+    return render(request, 'orders/order-detail.html', {'order': order})
 
 
 @login_required

@@ -34,6 +34,21 @@ urlpatterns = [
     path('coupons/<int:pk>/toggle/', views.coupon_toggle, name='admin_coupon_toggle'),
     path('coupons/<int:pk>/delete/', views.coupon_delete, name='admin_coupon_delete'),
 
+    path('orders/', views.admin_order_list, name='admin_order_list'),
+    path('orders/<str:order_id>/', views.admin_order_detail, name='admin_order_detail'),
+    path('orders/<str:order_id>/status/', views.admin_order_status, name='admin_order_status'),
+
+    path('reviews/',                  views.review_list,    name='admin_review_list'),
+    path('reviews/<int:review_id>/approve/', views.review_approve, name='admin_review_approve'),
+    path('reviews/<int:review_id>/reject/',  views.review_reject,  name='admin_review_reject'),
+    path('reviews/<int:review_id>/delete/',  views.review_delete,  name='admin_review_delete'),
+
+    path('inventory/', views.admin_inventory, name='admin_inventory'),
+    path('inventory/<int:variant_id>/update/', views.admin_update_stock, name='admin_update_stock'),
+
+    path('logout/', views.admin_logout, name='admin_logout'),
+    
+
 
     
 ]

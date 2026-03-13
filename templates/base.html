@@ -91,9 +91,9 @@
         font-weight: 600;
         letter-spacing: 1px;
       }
-      .account-wrapper {
-        position: relative;
-      }
+      .nav-account-wrapper {
+    position: relative;
+}
       
       .account-dropdown {
         position: absolute;
@@ -313,7 +313,7 @@
       <div class="nav-left">
         <ul class="nav-menu">
           <li>
-            <a href="#women">SHOP</a>
+            <a href="{% url 'products:product_list' %}">SHOP</a>
           </li>
           <li>
             <a href="#men">NEW IN</a>
@@ -344,8 +344,7 @@
             </svg>
           </a>
 
-          {% if request.path != '/profile/' %}
-            <div class="account-wrapper">
+            <div class="nav-account-wrapper">
               <div class="nav-icon account-icon">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <circle cx="12" cy="8" r="4"></circle>
@@ -362,7 +361,7 @@
                 </form>
               </div>
             </div>
-          {% endif %}
+        
 
           <!-- Cart Icon -->
           <a href="{% url 'orders:cart' %}" class="cart-icon-wrapper">

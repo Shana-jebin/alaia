@@ -1,6 +1,9 @@
 {% extends 'adminpanel/base_admin.html' %}
 {% load static %}
 {% block page_title %}Order {{ order.order_id }}{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'adminpanel/order-detail.css' %}">
+{% endblock %}
 
 {% block content %}
 
@@ -46,13 +49,14 @@
       {% endfor %}
     </div>
 
-    <!-- Customer & Address -->
+
     <div class="panel">
       <div class="panel-title">Customer &amp; Delivery</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <div>
-          <div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#8a8480;margin-bottom:6px;">Customer</div>
-          <div style="font-size:13px;color:#f0ece6;margin-bottom:2px;">{{ order.user.get_full_name|default:order.user.email }}</div>
+          <div class="info-label">Customer</div>
+<div class="info-value">{{ order.user.get_full_name|default:order.user.email }}</div>
+<div class="info-sub">{{ order.user.email }}</div>
           <div style="font-size:11px;color:#8a8480;">{{ order.user.email }}</div>
         </div>
         <div>

@@ -1,0 +1,197 @@
+{% extends 'adminpanel/base_admin.html' %}
+{% load static %}
+{% block page_title %}Inventory{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'adminpanel/inventory.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="inv-header">
+  <div>
+    <div class="inv-title">Inventory & Stock Management</div>
+    <div class="inv-sub">Monitor and update stock levels across all variants</div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="inv-stats">
+  <div class="inv-stat">
+    <div class="inv-stat-icon inv-icon-total">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+    </div>
+    <div class="inv-stat-body">
+      <div class="inv-stat-label">Total SKUs</div>
+      <div class="inv-stat-val">{{ stats.total }}</div>
+    </div>
+  </div>
+  <div class="inv-stat">
+    <div class="inv-stat-icon inv-icon-out">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+    </div>
+    <div class="inv-stat-body">
+      <div class="inv-stat-label">Out of Stock</div>
+      <div class="inv-stat-val" style="color:#ff3333;">{{ stats.out }}</div>
+    </div>
+  </div>
+  <div class="inv-stat">
+    <div class="inv-stat-icon inv-icon-low">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </div>
+    <div class="inv-stat-body">
+      <div class="inv-stat-label">Low Stock (≤10)</div>
+      <div class="inv-stat-val" style="color:#fbbf24;">{{ stats.low }}</div>
+    </div>
+  </div>
+  <div class="inv-stat">
+    <div class="inv-stat-icon inv-icon-ok">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <div class="inv-stat-body">
+      <div class="inv-stat-label">Healthy Stock</div>
+      <div class="inv-stat-val" style="color:#4ade80;">{{ stats.healthy }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="inv-filter-wrap">
+  <form method="GET">
+    <div class="inv-filter-row">
+      <div class="inv-filter-field">
+        <div class="inv-input-wrap">
+          <svg class="inv-input-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" class="inv-input" name="q" value="{{ q }}" placeholder="Search product, brand, category…">
+          {% if q %}
+          <a href="{% url 'admin_inventory' %}{% if stock_filter %}?stock={{ stock_filter }}{% endif %}" class="inv-input-clear">✕</a>
+          {% endif %}
+        </div>
+      </div>
+      <div class="inv-stock-pills">
+        <a href="?q={{ q }}" class="inv-pill {% if not stock_filter %}active{% endif %}">All</a>
+        <a href="?q={{ q }}&stock=out" class="inv-pill {% if stock_filter == 'out' %}active{% endif %}">Out of Stock</a>
+        <a href="?q={{ q }}&stock=low" class="inv-pill {% if stock_filter == 'low' %}active{% endif %}">Low Stock</a>
+        <a href="?q={{ q }}&stock=ok"  class="inv-pill {% if stock_filter == 'ok' %}active{% endif %}">Healthy</a>
+      </div>
+      <div class="inv-filter-actions">
+        <button type="submit" class="inv-btn-filter">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          Filter
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Table -->
+<div class="inv-card">
+  <div style="overflow-x:auto;">
+    <table class="inv-table">
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>Colour</th>
+          <th>Size</th>
+          <th>Price</th>
+          <th>Stock Level</th>
+          <th>Update Stock</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in page_obj %}
+        <tr id="inv-row-{{ v.id }}">
+          <td>
+            <div class="inv-pname">{{ v.product.name }}</div>
+            <div class="inv-pmeta">{{ v.product.brand.name }} · {{ v.product.category.name }}</div>
+          </td>
+          <td>
+            <div class="inv-color">
+              <span class="inv-color-dot" style="background:{% if v.color == 'black' %}#2a2a2a{% elif v.color == 'white' %}#f5f5f5{% elif v.color == 'gold' %}#f59e0b{% elif v.color == 'brown' %}#7c5c3a{% elif v.color == 'navy' %}#1c2a4a{% elif v.color == 'tan' %}#c8975a{% elif v.color == 'maroon' %}#6e2c2c{% else %}#555{% endif %};border:1px solid #2a2a2a;"></span>
+              {{ v.color|title }}
+            </div>
+          </td>
+          <td><span class="inv-size">{{ v.size }}</span></td>
+          <td>
+            <div class="inv-price">₹{{ v.final_price|floatformat:0 }}</div>
+            {% if v.sales_price %}<div class="inv-price-orig">₹{{ v.price|floatformat:0 }}</div>{% endif %}
+          </td>
+          <td>
+            <div class="inv-stock-val {% if v.stock == 0 %}stock-out{% elif v.stock <= 10 %}stock-low{% else %}stock-ok{% endif %}" id="sv-{{ v.id }}">{{ v.stock }}</div>
+            <div class="inv-stock-bar">
+              <div class="inv-stock-fill" style="width:{% if v.stock >= 100 %}100{% else %}{{ v.stock }}{% endif %}%;background:{% if v.stock == 0 %}#ff3333{% elif v.stock <= 10 %}#fbbf24{% else %}#4ade80{% endif %};"></div>
+            </div>
+            {% if v.stock == 0 %}<div class="inv-out-label">Out of Stock</div>{% endif %}
+          </td>
+          <td>
+            <div class="inv-edit-row">
+              <input type="number" class="inv-stock-input" id="si-{{ v.id }}" value="{{ v.stock }}" min="0">
+              <button class="inv-btn-save" onclick="updateStock({{ v.id }})">Save</button>
+            </div>
+            <div class="inv-save-msg" id="sm-{{ v.id }}"></div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if page_obj.has_other_pages %}
+  <div class="inv-pagination">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&stock={{ stock_filter }}" class="inv-page-btn">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+      Prev
+    </a>
+    {% endif %}
+    <span class="inv-page-info">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}&q={{ q }}&stock={{ stock_filter }}" class="inv-page-btn">
+      Next
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = () => document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+function updateStock(variantId) {
+  const input = document.getElementById('si-' + variantId);
+  const msg   = document.getElementById('sm-' + variantId);
+  const sv    = document.getElementById('sv-' + variantId);
+  const stock = parseInt(input.value);
+
+  if (isNaN(stock) || stock < 0) {
+    msg.textContent = 'Invalid value';
+    msg.className = 'inv-save-msg err';
+    return;
+  }
+
+  fetch(`/admin-panel/inventory/stock/${variantId}/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF() },
+    body: JSON.stringify({ stock })
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      msg.textContent = '✓ Updated';
+      msg.className = 'inv-save-msg ok';
+      sv.textContent = d.stock;
+      sv.className = 'inv-stock-val ' + (d.stock === 0 ? 'stock-out' : d.stock <= 10 ? 'stock-low' : 'stock-ok');
+      setTimeout(() => msg.textContent = '', 2000);
+    } else {
+      msg.textContent = d.error;
+      msg.className = 'inv-save-msg err';
+    }
+  });
+}
+</script>
+{% endblock %}

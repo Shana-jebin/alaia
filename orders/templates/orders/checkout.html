@@ -61,22 +61,17 @@
       <div class="section-block">
         <div class="section-label">Payment Method</div>
         <div class="pay-grid">
-          <label class="pay-option selected" id="pay-cod" onclick="selectPay('cod')">
-            <input type="radio" name="payment_method" value="cod" checked>
+          <label class="pay-option selected" id="pay-cod">
+            <input type="radio" name="payment_method" value="cod" checked onchange="selectPay('cod')">
             <div class="pay-dot"></div>
             <div class="pay-info">
               <div class="pay-label">Cash on Delivery</div>
               <div class="pay-sub">Pay when your order arrives</div>
             </div>
-            <svg width="28" height="18" viewBox="0 0 28 18" fill="none">
-              <rect width="28" height="18" rx="2" fill="#f5f0e8"/>
-              <circle cx="11" cy="9" r="5" fill="#c9a96e" opacity=".6"/>
-              <circle cx="17" cy="9" r="5" fill="#c9a96e" opacity=".9"/>
-            </svg>
+         
           </label>
-          <label class="pay-option" id="pay-online" onclick="selectPay('online')"
-                 style="opacity:.45;pointer-events:none;" title="Coming soon">
-            <input type="radio" name="payment_method" value="online" disabled>
+         <label class="pay-option" id="pay-online">
+           <input type="radio" name="payment_method" value="online" onchange="selectPay('online')">
             <div class="pay-dot"></div>
             <div class="pay-info">
               <div class="pay-label">Online Payment <span style="font-size:9px;color:var(--muted);">(Coming Soon)</span></div>
@@ -85,7 +80,6 @@
           </label>
         </div>
       </div>
-
       <!-- 3. Coupon -->
       <div class="section-block">
         <div class="section-label">Promo Code</div>
@@ -128,7 +122,7 @@
           <div class="co-item-name">{{ item.variant.product.name }}</div>
           <div class="co-item-meta">{{ item.variant.color|title }} / {{ item.variant.size }} · Qty {{ item.quantity }}</div>
         </div>
-        <div class="co-item-price">₹{{ item.variant.final_price|floatformat:0 }}</div>
+        <div class="co-item-price">₹{{ item.subtotal|floatformat:0 }}</div>
       </div>
       {% endfor %}
     </div>
@@ -177,8 +171,15 @@ function selectAddr(id) {
 }
 
 function selectPay(val) {
-  document.querySelectorAll('.pay-option').forEach(p => p.classList.remove('selected'));
-  document.getElementById('pay-' + val).classList.add('selected');
+  document.querySelectorAll('.pay-option').forEach(p => {
+    p.classList.remove('selected');
+  });
+
+  const selected = document.getElementById('pay-' + val);
+  selected.classList.add('selected');
+
+  const radio = selected.querySelector('input');
+  radio.checked = true;
 }
 
 function useCoupon(code) {
