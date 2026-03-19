@@ -159,7 +159,8 @@ def address_list(request):
 
     return render(request, "user_profile/address-management.html", {
     "addresses": addresses,
-    "active_page": "addresses"
+    "active_page": "addresses",
+    "next": request.GET.get('next', ''),
 })
 
 
@@ -195,12 +196,19 @@ def add_address(request):
             phone=phone,
             is_default=True if is_default else False
         )
-
         messages.success(request, "Address added successfully!")
+        next_url = request.POST.get('next') or request.GET.get('next')
+        if next_url:
+            return redirect(next_url)
+        if Address.objects.filter(user=request.user).count() >= 2:
+            return redirect('orders:checkout')
         return redirect("address_list")
 
 
-    return render(request, "user_profile/add-address.html")
+    return render(request, "user_profile/add-address.html", {
+    'next': request.GET.get('next', ''),
+    'address': None,
+})
 
 
 
@@ -236,7 +244,10 @@ def edit_address(request, id):
         return redirect("address_list")
 
 
-    return render(request, 'user_profile/add-address.html', {'address': address})
+    return render(request, 'user_profile/add-address.html', {
+    'address': address,
+    'next': request.GET.get('next', ''),
+})
 
 
 def delete_address(request, id):

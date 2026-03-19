@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Payment Failed — ALAIA{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root { --dark: #2a2520; --gold: #c9a96e; --muted: #888; }
+
+  body { background: #fdfcfa; }
+
+  .pf-wrap {
+    max-width: 480px;
+    margin: 80px auto;
+    padding: 0 20px;
+    text-align: center;
+    font-family: 'Montserrat', sans-serif;
+  }
+
+  .pf-icon {
+    width: 72px; height: 72px;
+    background: #fff0f0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px;
+  }
+
+  .pf-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 10px;
+  }
+
+  .pf-sub {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 32px;
+  }
+
+  .pf-order {
+    background: #fff;
+    border: 1px solid #ede8e0;
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 28px;
+    text-align: left;
+  }
+
+  .pf-order-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .pf-order-row span:last-child { color: var(--dark); font-weight: 500; }
+
+  .pf-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .btn-retry {
+    padding: 15px;
+    background: var(--dark);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-decoration: none;
+    display: block;
+    transition: background .2s;
+  }
+
+  .btn-retry:hover { background: #3d3530; }
+
+  .btn-home {
+    padding: 14px;
+    background: transparent;
+    color: var(--dark);
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-decoration: none;
+    display: block;
+    transition: border-color .2s;
+  }
+
+  .btn-home:hover { border-color: var(--dark); }
+
+  .pf-note {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 20px;
+    line-height: 1.6;
+  }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="pf-wrap">
+  <div class="pf-icon">
+    <svg width="32" height="32" fill="none" stroke="#e74c3c" stroke-width="2" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="15" y1="9" x2="9" y2="15"/>
+      <line x1="9" y1="9" x2="15" y2="15"/>
+    </svg>
+  </div>
+
+  <div class="pf-title">Payment Failed</div>
+  <div class="pf-sub">
+    We couldn't process your payment. Your order has been saved —
+    you can retry the payment or choose a different payment method.
+  </div>
+
+  <div class="pf-order">
+    <div class="pf-order-row">
+      <span>Order ID</span><span>{{ order.order_id }}</span>
+    </div>
+    <div class="pf-order-row">
+      <span>Amount</span><span>₹{{ order.total|floatformat:0 }}</span>
+    </div>
+    <div class="pf-order-row">
+      <span>Status</span>
+      <span style="color:#e74c3c;">Payment Failed</span>
+    </div>
+  </div>
+
+  <div class="pf-actions">
+    <form method="POST" action="{% url 'orders:retry_payment' order.order_id %}">
+      {% csrf_token %}
+      <button type="submit" class="btn-retry">Retry Payment</button>
+    </form>
+    <a href="{% url 'orders:order_list' %}" class="btn-home">View My Orders</a>
+    <a href="/" class="btn-home">Back to Home</a>
+  </div>
+
+  <p class="pf-note">
+    No money has been deducted from your account.<br>
+    If you were charged, it will be automatically refunded within 5–7 business days.
+  </p>
+</div>
+{% endblock %}

@@ -19,7 +19,8 @@
     </div>
 
     <form method="POST" class="address-form">
-      {% csrf_token %}
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ next }}">
 
       <div class="form-group">
         <label for="fullName">Full Name</label>

@@ -13,7 +13,7 @@
 {% block content %}
 
 {# ── Redirect handled in view; show error state if product blocked ── #}
-{% if product.is_blocked or not product.is_active %}
+{% if not product.is_active or product.is_deleted %}
 <div class="pd-error-wrap">
   <div class="pd-error-code">410</div>
   <div class="pd-error-title">This piece is no longer available</div>
@@ -44,20 +44,21 @@
     {% endif %}
 
     <div class="pd-zoom-stage" id="zoomStage">
-      {% if default_variant and default_variant.images.first %}
-        <img class="main-img" id="mainImg"
-             src="{{ default_variant.images.first.image.url }}"
-             alt="{{ product.name }}">
-      {% else %}
-        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
-          <svg width="48" height="48" fill="none" stroke="var(--border)" stroke-width="1" viewBox="0 0 24 24">
-            <rect x="3" y="3" width="18" height="18" rx="2"/>
-            <circle cx="8.5" cy="8.5" r="1.5"/>
-            <polyline points="21 15 16 10 5 21"/>
-          </svg>
-        </div>
-      {% endif %}
-
+    {% with img=default_variant.images.first %}
+  {% if img %}
+    <img class="main-img" id="mainImg"
+         src="{{ img.image.url }}"
+         alt="{{ product.name }}">
+  {% else %}
+    <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+      <svg width="48" height="48" fill="none" stroke="var(--border)" stroke-width="1" viewBox="0 0 24 24">
+        <rect x="3" y="3" width="18" height="18" rx="2"/>
+        <circle cx="8.5" cy="8.5" r="1.5"/>
+        <polyline points="21 15 16 10 5 21"/>
+      </svg>
+    </div>
+  {% endif %}
+{% endwith %}
       {% if product.is_featured %}
         <span class="pd-gallery-badge badge-featured-lg">Featured</span>
       {% elif default_variant.sales_price %}
@@ -76,17 +77,30 @@
     </div>
 
     <!-- Thumbnails -->
-    <div class="pd-thumbs" id="thumbsRow">
-      {% for variant in variants %}
-        {% for img in variant.images.all %}
-        <div class="pd-thumb {% if forloop.parentloop.first and forloop.first %}active{% endif %}"
-             data-src="{{ img.image.url }}"
-             data-variant="{{ variant.id }}">
-          <img src="{{ img.image.url }}" alt="{{ product.name }}">
-        </div>
-        {% endfor %}
+<div class="pd-thumbs" id="thumbsRow">
+
+  {% with seen="" %}
+    {% for variant in variants %}
+      {% for img in variant.images.all %}
+        
+        {% if img.image.url not in seen %}
+          
+          <div class="pd-thumb {% if forloop.parentloop.first and forloop.first %}active{% endif %}"
+               data-src="{{ img.image.url }}"
+               data-variant="{{ variant.id }}">
+            <img src="{{ img.image.url }}" alt="{{ product.name }}">
+          </div>
+
+          {% with seen=seen|add:img.image.url|add:"," %}
+          {% endwith %}
+
+        {% endif %}
+        
       {% endfor %}
-    </div>
+    {% endfor %}
+  {% endwith %}
+
+</div>
 
   </div>
   <!-- /gallery -->
@@ -485,7 +499,7 @@
   <span id="pdToastMsg">Added to collection</span>
 </div>
 
-{% endif %}{# end product available check #}
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
@@ -712,7 +726,7 @@ window.submitReview = function(productId){
   const text = document.getElementById('reviewText')?.value?.trim();
   if(!pickedRating){ msg.textContent = 'Please select a star rating.'; msg.className = 'pd-form-msg error'; return; }
   if(!text || text.length < 10){ msg.textContent = 'Review must be at least 10 characters.'; msg.className = 'pd-form-msg error'; return; }
-  fetch(`/orders/api/review/${productId}/`, {
+  fetch(`/products/api/review/${productId}/`, {
     method: 'POST',
     headers: {'Content-Type':'application/json','X-CSRFToken':CSRF()},
     body: JSON.stringify({ rating: pickedRating, comment: text }),

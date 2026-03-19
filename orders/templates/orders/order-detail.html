@@ -69,8 +69,12 @@
       {% for item in order.items.all %}
       <div class="od-item" id="od-item-{{ item.id }}">
         <div class="od-item-img">
-          {% if item.image_url %}<img src="{{ item.image_url }}" alt="{{ item.product_name }}">{% endif %}
-        </div>
+  {% if item.image_url %}
+    <img src="{{ item.image_url }}" alt="{{ item.product_name }}" loading="lazy">
+  {% else %}
+    <div class="cart-img-placeholder">No image</div>
+  {% endif %}
+</div>
         <div class="od-item-info">
           <div class="od-item-brand">{{ item.brand_name }}</div>
           <div class="od-item-name">{{ item.product_name }}</div>

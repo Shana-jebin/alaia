@@ -10,6 +10,7 @@ urlpatterns = [
     path('address/<int:id>/edit/', views.edit_address, name='edit_address'),
     path('address/<int:id>/delete/', views.delete_address, name='delete_address'),
     path('set-default-address/<int:id>/', views.set_default_address, name='set_default_address'),
+    
 
 
 

@@ -174,7 +174,7 @@ function updateStock(variantId) {
     return;
   }
 
-  fetch(`/admin-panel/inventory/stock/${variantId}/`, {
+  fetch(`/admin-panel/inventory/${variantId}/update/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF() },
     body: JSON.stringify({ stock })

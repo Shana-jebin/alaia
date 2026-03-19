@@ -1,0 +1,213 @@
+
+  :root { --dark: #2a2520; --gold: #c9a96e; --muted: #888; --bg: #fdfcfa; }
+
+  body { background: var(--bg); }
+
+  .wl-wrap {
+    max-width: 720px;
+    margin: 48px auto;
+    padding: 0 20px;
+    font-family: 'Montserrat', sans-serif;
+  }
+
+  .wl-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 24px;
+  }
+  .wl-add-wrap {
+  background: #fff;
+  border: 1px solid #ede8e0;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 28px;
+}
+
+.wl-add-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #2a2520;
+  margin-bottom: 16px;
+  letter-spacing: 0.3px;
+}
+
+.wl-quick-amounts {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.wl-quick-btn {
+  padding: 8px 18px;
+  border: 1px solid #e8e3dd;
+  border-radius: 6px;
+  background: #fdfcfa;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2a2520;
+  cursor: pointer;
+  transition: all .15s;
+}
+
+.wl-quick-btn:hover,
+.wl-quick-btn.active {
+  background: #2a2520;
+  color: #fff;
+  border-color: #2a2520;
+}
+
+.wl-add-row {
+  display: flex;
+  gap: 10px;
+}
+
+.wl-add-input {
+  flex: 1;
+  padding: 11px 14px;
+  border: 1px solid #e8e3dd;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #2a2520;
+  outline: none;
+  transition: border-color .15s;
+}
+
+.wl-add-input:focus { border-color: #c9a96e; }
+
+.wl-add-btn {
+  padding: 11px 24px;
+  background: #2a2520;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .15s;
+  white-space: nowrap;
+}
+
+.wl-add-btn:hover { background: #c9a96e; color: #2a2520; }
+
+.wl-add-msg {
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.wl-add-msg.success { color: #27ae60; }
+.wl-add-msg.error   { color: #e74c3c; }
+
+  /* Balance card */
+  .wl-balance-card {
+    background: var(--dark);
+    border-radius: 16px;
+    padding: 36px 40px;
+    color: #fff;
+    margin-bottom: 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .wl-balance-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    opacity: .6;
+    margin-bottom: 8px;
+  }
+
+  .wl-balance-amount {
+    font-size: 40px;
+    font-weight: 700;
+    letter-spacing: -1px;
+  }
+
+  .wl-balance-sub {
+    font-size: 11px;
+    opacity: .5;
+    margin-top: 6px;
+  }
+
+  .wl-card-icon {
+    width: 56px; height: 56px;
+    background: rgba(201,169,110,.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Transactions */
+  .wl-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--dark);
+    margin-bottom: 16px;
+  }
+
+  .wl-tx-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .wl-tx {
+    background: #fff;
+    border: 1px solid #ede8e0;
+    border-radius: 10px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .wl-tx-dot {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .wl-tx-dot.credit { background: #eafaf1; }
+  .wl-tx-dot.debit  { background: #fff0f0; }
+
+  .wl-tx-info { flex: 1; }
+
+  .wl-tx-desc {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--dark);
+    margin-bottom: 3px;
+  }
+
+  .wl-tx-date {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .wl-tx-order {
+    font-size: 10px;
+    color: var(--gold);
+    margin-top: 2px;
+  }
+
+  .wl-tx-amount {
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .wl-tx-amount.credit { color: #27ae60; }
+  .wl-tx-amount.debit  { color: #e74c3c; }
+
+  .wl-empty {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  

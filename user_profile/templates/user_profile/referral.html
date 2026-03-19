@@ -1,0 +1,140 @@
+
+{% extends 'user_profile/base_profile.html' %}
+{% load static %}
+
+{% block title %}Refer & Earn — ALAIA{% endblock %}
+
+{% block extra_css %}
+
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'user_profile/profile.css' %}" />
+<link rel="stylesheet" href="{% static 'user_profile/referral.css' %}" />
+{% endblock %}
+
+{% block profile_content %}
+<div class="ref-wrap">
+
+  <div class="ref-title">Refer &amp; Earn</div>
+  <div class="ref-sub">Share your code, earn wallet credits when friends sign up</div>
+
+  <!-- Hero card with code -->
+  <div class="ref-hero">
+    <div class="ref-hero-label">Your Referral Code</div>
+    <div class="ref-code-wrap">
+      <div class="ref-code" id="refCode">{{ ref_obj.code }}</div>
+      <button class="btn-copy" id="copyCodeBtn" onclick="copyCode()">Copy</button>
+    </div>
+    <div class="ref-stats">
+      <div>
+        <div class="ref-stat-label">Friends Referred</div>
+        <div class="ref-stat-value">{{ ref_obj.used_count }}</div>
+      </div>
+      <div>
+        <div class="ref-stat-label">Total Earned</div>
+        <div class="ref-stat-value">₹{{ ref_obj.used_count|default:0 | add:0 }}
+          {# calculated below in JS #}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rewards -->
+  <div class="ref-rewards">
+    <div class="ref-reward-card">
+      <div class="ref-reward-amount">₹{{ referrer_reward }}</div>
+      <div class="ref-reward-label">You earn when a friend signs up with your code</div>
+    </div>
+    <div class="ref-reward-card">
+      <div class="ref-reward-amount">₹{{ referee_reward }}</div>
+      <div class="ref-reward-label">Your friend earns as a welcome bonus</div>
+    </div>
+  </div>
+
+  <!-- How it works -->
+  <div class="ref-how">
+    <div class="ref-section-title">How it works</div>
+    <div class="ref-steps">
+      <div class="ref-step">
+        <div class="ref-step-num">1</div>
+        <div class="ref-step-text">
+          <strong>Share your code</strong> — Copy your referral code or link and share it with friends
+        </div>
+      </div>
+      <div class="ref-step">
+        <div class="ref-step-num">2</div>
+        <div class="ref-step-text">
+          <strong>Friend signs up</strong> — They enter your code during registration on ALAIA
+        </div>
+      </div>
+      <div class="ref-step">
+        <div class="ref-step-num">3</div>
+        <div class="ref-step-text">
+          <strong>Both get rewarded</strong> — You get ₹{{ referrer_reward }} and your friend gets ₹{{ referee_reward }} added to your wallets instantly
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Share link -->
+  <div class="ref-share">
+    <div class="ref-share-title">Share your referral link</div>
+    <div class="ref-link-wrap">
+      <input type="text" class="ref-link-input" id="refLink"
+             value="{{ request.scheme }}://{{ request.get_host }}/accounts/signup/?ref={{ ref_obj.code }}"
+             readonly>
+      <button class="btn-copy-link" onclick="copyLink(this)">Copy Link</button>
+    </div>
+  </div>
+
+  <!-- Referral history -->
+  <div class="ref-section-title">Referral History</div>
+  <div class="ref-history">
+    {% for r in referrals %}
+    <div class="ref-history-item">
+      <div class="ref-avatar">{{ r.referee.first_name|first|upper }}</div>
+      <div class="ref-history-info">
+        <div class="ref-history-email">{{ r.referee.get_full_name|default:r.referee.email }}</div>
+        <div class="ref-history-date">Joined {{ r.created_at|date:"d M Y" }}</div>
+      </div>
+      <div class="ref-history-reward">+₹{{ referrer_reward }}</div>
+    </div>
+    {% empty %}
+    <div class="ref-empty">
+      No referrals yet.<br>Share your code to start earning!
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function copyCode() {
+  const code = document.getElementById('refCode').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    const btn = document.getElementById('copyCodeBtn');
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = 'Copy';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+
+function copyLink(btn) {
+  const link = document.getElementById('refLink').value;
+
+  navigator.clipboard.writeText(link).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');   
+
+    setTimeout(() => {
+      btn.textContent = 'Copy Link';
+      btn.classList.remove('copied'); 
+    }, 2000);
+  });
+}
+</script>
+{% endblock %}

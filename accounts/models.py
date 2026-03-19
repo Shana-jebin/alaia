@@ -34,10 +34,6 @@ class Profile(models.Model):
 
 
 
-@receiver(post_save, sender=User)
-def create_user_profile(sender, instance, created, **kwargs):
-    if created:
-        Profile.objects.create(user=instance)
 
 
 class Address(models.Model):
@@ -55,3 +51,54 @@ class Address(models.Model):
 
     def __str__(self):
         return f"{self.full_name} - {self.city}"
+    
+
+import random
+import string
+ 
+def generate_referral_code():
+    """Generate a unique 8-char referral code like ALAIA-X7K2"""
+    chars = string.ascii_uppercase + string.digits
+    return 'ALAIA-' + ''.join(random.choices(chars, k=4))
+ 
+ 
+class ReferralCode(models.Model):
+    """One referral code per user, auto-created on signup."""
+    user       = models.OneToOneField(User, on_delete=models.CASCADE, related_name='referral_code')
+    code       = models.CharField(max_length=20, unique=True)
+    used_count = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+ 
+    def __str__(self):
+        return f"{self.code} → {self.user.email}"
+ 
+    def save(self, *args, **kwargs):
+        if not self.code:
+            code = generate_referral_code()
+            while ReferralCode.objects.filter(code=code).exists():
+                code = generate_referral_code()
+            self.code = code
+        super().save(*args, **kwargs)
+ 
+ 
+class ReferralUsage(models.Model):
+    """Records who referred whom."""
+    referrer   = models.ForeignKey(User, on_delete=models.CASCADE, related_name='referrals_made')
+    referee    = models.ForeignKey(User, on_delete=models.CASCADE, related_name='referred_by')
+    created_at = models.DateTimeField(auto_now_add=True)
+ 
+    
+    REFERRER_REWARD = 100  
+    REFEREE_REWARD  = 50  
+ 
+    class Meta:
+        unique_together = ('referrer', 'referee')
+ 
+    def __str__(self):
+        return f"{self.referrer.email} referred {self.referee.email}"
+
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        Profile.objects.get_or_create(user=instance)
+        ReferralCode.objects.get_or_create(user=instance) 

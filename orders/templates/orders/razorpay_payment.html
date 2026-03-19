@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Complete Payment — ALAIA{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --dark: #2a2520;
+    --gold: #c9a96e;
+    --muted: #888;
+    --bg: #fdfcfa;
+  }
+
+  body { background: var(--bg); }
+
+  .pay-wrap {
+    max-width: 480px;
+    margin: 60px auto;
+    padding: 0 20px;
+    font-family: 'Montserrat', sans-serif;
+  }
+
+  .pay-card {
+    background: #fff;
+    border: 1px solid #ede8e0;
+    border-radius: 12px;
+    padding: 40px;
+    text-align: center;
+    box-shadow: 0 4px 24px rgba(0,0,0,.06);
+  }
+
+  .pay-logo {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: 4px;
+    color: var(--dark);
+    margin-bottom: 8px;
+  }
+
+  .pay-sub {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+  }
+
+  .pay-amount {
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 6px;
+  }
+
+  .pay-order-id {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 32px;
+  }
+
+  .pay-btn {
+    width: 100%;
+    padding: 16px;
+    background: var(--dark);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background .2s;
+  }
+
+  .pay-btn:hover { background: #3d3530; }
+  .pay-btn:disabled { background: #aaa; cursor: not-allowed; }
+
+  .pay-secure {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 16px;
+  }
+
+  .pay-breakdown {
+    text-align: left;
+    border-top: 1px solid #ede8e0;
+    margin: 24px 0;
+    padding-top: 20px;
+  }
+
+  .pay-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .pay-row.total {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--dark);
+    border-top: 1px solid #ede8e0;
+    padding-top: 10px;
+    margin-top: 4px;
+  }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="pay-wrap">
+  <div class="pay-card">
+    <div class="pay-logo">ALAIA</div>
+    <div class="pay-sub">Secure Payment</div>
+
+    <div class="pay-amount">₹{{ order.total|floatformat:0 }}</div>
+    <div class="pay-order-id">Order #{{ order.order_id }}</div>
+
+    <div class="pay-breakdown">
+      <div class="pay-row">
+        <span>Subtotal</span>
+        <span>₹{{ order.subtotal|floatformat:0 }}</span>
+      </div>
+      {% if order.discount > 0 %}
+      <div class="pay-row">
+        <span>Discount</span>
+        <span style="color:#27ae60;">−₹{{ order.discount|floatformat:0 }}</span>
+      </div>
+      {% endif %}
+      <div class="pay-row">
+        <span>Shipping</span>
+        <span>{% if order.shipping == 0 %}Free{% else %}₹{{ order.shipping|floatformat:0 }}{% endif %}</span>
+      </div>
+      <div class="pay-row total">
+        <span>Total</span>
+        <span>₹{{ order.total|floatformat:0 }}</span>
+      </div>
+    </div>
+
+    <button class="pay-btn" id="payBtn" onclick="startPayment()">
+      Pay ₹{{ order.total|floatformat:0 }}
+    </button>
+
+    <div class="pay-secure">
+      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+        <rect x="3" y="11" width="18" height="11" rx="2"/>
+        <path d="M7 11V7a5 5 0 0110 0v4"/>
+      </svg>
+      256-bit SSL encrypted · Powered by Razorpay
+    </div>
+  </div>
+</div>
+
+<!-- Hidden form to POST callback data — avoids Brave blocking window.location -->
+<form id="callbackForm" method="POST" action="{% url 'orders:razorpay_callback' %}" style="display:none;">
+  {% csrf_token %}
+  <input type="hidden" name="razorpay_order_id"   id="f_order_id">
+  <input type="hidden" name="razorpay_payment_id"  id="f_payment_id">
+  <input type="hidden" name="razorpay_signature"   id="f_signature">
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+const ORDER_ID   = '{{ order.order_id }}';
+const FAILED_URL = '/orders/payment-failed/{{ order.order_id }}/';
+
+function startPayment() {
+  const btn = document.getElementById('payBtn');
+  btn.disabled    = true;
+  btn.textContent = 'Redirecting to payment…';
+
+  // Submit the hidden form directly to Razorpay hosted page
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = 'https://api.razorpay.com/v1/checkout/embedded';
+
+  const fields = {
+    key_id:      '{{ RAZORPAY_KEY_ID }}',
+    order_id:    '{{ razorpay_order_id }}',
+    name:        'ALAIA',
+    description: 'Order {{ order.order_id }}',
+    amount:      '{{ amount_paise }}',
+    currency:    'INR',
+    prefill_name:    '{{ order.full_name|escapejs }}',
+    prefill_email:   '{{ order.user.email|escapejs }}',
+    prefill_contact: '9999999999',
+    callback_url: 'http://127.0.0.1:8000/orders/razorpay/callback/',
+    cancel_url:   'http://127.0.0.1:8000/orders/payment-failed/{{ order.order_id }}/',
+  };
+
+  for (const [key, val] of Object.entries(fields)) {
+    const input = document.createElement('input');
+    input.type  = 'hidden';
+    input.name  = key;
+    input.value = val;
+    form.appendChild(input);
+  }
+
+  document.body.appendChild(form);
+  form.submit();
+}
+</script>
+{% endblock %}

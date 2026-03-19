@@ -26,22 +26,25 @@
     --input-border: #2e2e2e;
     --input-focus: #3a3a3a;
 }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
 body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    overflow: hidden;
+  background-color: #000000;
+  color: #ffffff;
+  font-family: 'Segoe UI', sans-serif;
+  min-height: 100vh;
 }
 
-/* ── MAIN ── */
-.main {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    overflow: hidden;
+.main-content {
+  background-color: #000000 !important;
 }
+
+
+
 
 .topbar {
     display: flex;

@@ -145,7 +145,7 @@ onclick="openEditModal('{{ brand.id }}','{{ brand.name }}','{{ brand.rating }}',
         {% endif %}
       {% endfor %}
 
-      <!-- Next -->
+    
       {% if brands.has_next %}
         <a href="?{% if query %}
             
@@ -236,7 +236,7 @@ onclick="openEditModal('{{ brand.id }}','{{ brand.name }}','{{ brand.rating }}',
 </div>
 <div id="addBrandModal" class="modal-overlay">
   <div class="modal-box">
-
+  
     <h3>Add Brand</h3>
 
     <form method="POST" enctype="multipart/form-data" action="{% url 'brand_create' %}">

@@ -154,16 +154,16 @@
     <!-- 5. Occasion + Price -->
     <div>
       <div class="filter-group-title">Occasion</div>
-<div class="filter-options" style="max-height:120px;overflow-y:auto;padding-right:4px;">
-  {% for occ in available_occasions %}
-  <label class="filter-option">
-    <input type="checkbox" class="occ-cb" value="{{ occ.id }}"
-      {% if occ.id|stringformat:"s" in selected_occasions %}checked{% endif %}>
-    <span class="custom-check"></span>
-    <span>{{ occ.name }}</span>
-  </label>
-  {% endfor %}
-</div>
+      <div class="filter-options" style="max-height:120px;overflow-y:auto;padding-right:4px;">
+        {% for occ in available_occasions %}
+        <label class="filter-option">
+          <input type="checkbox" class="occ-cb" value="{{ occ.id }}"
+            {% if occ.id|stringformat:"s" in selected_occasions %}checked{% endif %}>
+          <span class="custom-check"></span>
+          <span>{{ occ.name }}</span>
+        </label>
+        {% endfor %}
+      </div>
 
       <div style="margin-top:18px;">
         <div class="filter-group-title">Price Range</div>
@@ -219,12 +219,12 @@
   {% endfor %}
 
   {% for occ in available_occasions %}
-  {% if occ.id|stringformat:"s" in selected_occasions %}
-  <a class="filter-tag" href="{{ request.path }}?{{ query_string_no_occ }}">
-    {{ occ.name }} <span>×</span>
-  </a>
-  {% endif %}
-{% endfor %}
+    {% if occ.id|stringformat:"s" in selected_occasions %}
+    <a class="filter-tag" href="{{ request.path }}?{{ query_string_no_occ }}">
+      {{ occ.name }} <span>×</span>
+    </a>
+    {% endif %}
+  {% endfor %}
 
   {% if price_min or price_max %}
   <a class="filter-tag" href="{{ request.path }}?{{ query_string_no_price }}">
@@ -246,14 +246,15 @@
   <div class="products-grid" id="productsGrid">
 
     {% for product in products %}
-    {% with fv=product.variants.first %}
+    {% with fv=product.variants.first img=product.first_image %}
     <a class="product-card"
-   href="{% url 'products:product_detail' product.slug %}"
+       href="{% url 'products:product_detail' product.slug %}"
        style="animation-delay:{{ forloop.counter0 }}00ms">
 
       <div class="product-img-wrap">
-        {% if fv and fv.images.first %}
-          <img class="product-img" src="{{ fv.images.first.image.url }}"
+
+        {% if img %}
+          <img class="product-img" src="{{ img.image.url }}"
                alt="{{ product.name }}" loading="lazy">
         {% else %}
           <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
@@ -265,7 +266,9 @@
           </div>
         {% endif %}
 
-        {% if product.is_featured %}
+        {% if product.total_stock == 0 %}
+          <span class="product-badge badge-soldout">Sold Out</span>
+        {% elif product.is_featured %}
           <span class="product-badge badge-featured">Featured</span>
         {% elif fv and fv.sales_price %}
           <span class="product-badge badge-sale">Sale</span>
@@ -288,10 +291,11 @@
         <div class="product-name">{{ product.name }}</div>
 
         {% if product.occasions.all %}
-  {% for occ in product.occasions.all %}
-    <span class="product-occasion">{{ occ.name }}</span>
-  {% endfor %}
-{% endif %}
+          {% for occ in product.occasions.all %}
+            <span class="product-occasion">{{ occ.name }}</span>
+          {% endfor %}
+        {% endif %}
+
         {% if product.unique_colors %}
         <div class="card-colors">
           {% for c in product.unique_colors %}
@@ -488,41 +492,35 @@
       listViewBtn.classList.add('active'); gridViewBtn.classList.remove('active');
     });
   }
-window.toggleWishlist = function(btn, productId){
 
-    fetch(`/orders/wishlist/toggle/${productId}/`,{
-    method:"POST",
-    headers:{
+  window.toggleWishlist = function(btn, productId) {
+    fetch(`/orders/wishlist/toggle/${productId}/`, {
+      method: "POST",
+      headers: {
         "X-CSRFToken": document.cookie.match(/csrftoken=([^;]+)/)[1]
-    }
-})
-.then(res => {
-    if (res.redirected) {
-        window.location.href = res.url
-        return
-    }
-    return res.json()
-})
-.then(data=>{
-    if(!data) return;
-
-    if(!data.success){
-        showToast(data.message);
+      }
+    })
+    .then(res => {
+      if (res.redirected) {
+        window.location.href = res.url;
         return;
-    }
-
-    const path = btn.querySelector("path");
-
-    if(data.added){
+      }
+      return res.json();
+    })
+    .then(data => {
+      if (!data) return;
+      if (!data.success) return;
+      const path = btn.querySelector("path");
+      if (data.added) {
         path.style.fill = "#c9a96e";
         path.style.stroke = "#c9a96e";
-    }else{
+      } else {
         path.style.fill = "none";
         path.style.stroke = "currentColor";
-    }
-});
+      }
+    });
+  }
 
-}
 })();
 </script>
 {% endblock %}

@@ -15,24 +15,11 @@
         <p class="subtitle">Create your account to access exclusive collections.</p>
         {% if messages %}
           <div class="message-container">
-            <!-- Django messages -->
             {% for message in messages %}
               <div class="alert {{ message.tags }}">{{ message }}</div>
             {% endfor %}
-
-            <!-- Field errors -->
           </div>
         {% endif %}
-        {% if messages %}
-  <div class="message-container">
-    {% for message in messages %}
-      <div class="alert {{ message.tags }}">
-        {{ message }}
-      </div>
-    {% endfor %}
-  </div>
-{% endif %}
-
 
         <form method="POST" novalidate>
           {% csrf_token %}
@@ -64,22 +51,27 @@
               {% endif %}
             </div>
           </div>
+
           <div class="form-group">
             <label>Phone Number</label>
-
             <input type="tel" name="phone" value="{{ old.phone|default:'' }}" placeholder="Enter 10-digit mobile number" maxlength="10" inputmode="numeric" class="{% if errors.phone %}error-input{% endif %}" />
-
             {% if errors.phone %}
               <p class="error-text">{{ errors.phone }}</p>
             {% endif %}
           </div>
 
           <div class="form-group">
-            <label for="password">Password</label>
+            <label>Referral Code <span style="color:#9A8F82;font-weight:400;text-transform:none;">(optional)</span></label>
+            <input type="text" name="referral_code" value="{{ old.referral_code|default:'' }}" placeholder="ENTER CODE" class="{% if errors.referral_code %}error-input{% endif %}" style="text-transform:uppercase;" />
+            {% if errors.referral_code %}
+              <p class="error-text">{{ errors.referral_code }}</p>
+            {% endif %}
+          </div>
 
+          <div class="form-group">
+            <label for="password">Password</label>
             <div class="input-wrapper">
               <input type="password" id="password" name="password" placeholder="••••••••" class="{% if errors.password %}error-input{% endif %}" />
-
               <span class="eye" onclick="togglePassword('password')">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" />
@@ -87,7 +79,6 @@
                 </svg>
               </span>
             </div>
-
             {% if errors.password %}
               <p class="error">{{ errors.password }}</p>
             {% endif %}
@@ -95,10 +86,8 @@
 
           <div class="form-group">
             <label for="confirm_password">Confirm Password</label>
-
             <div class="input-wrapper">
               <input type="password" id="confirm_password" name="confirm_password" placeholder="••••••••" class="{% if errors.confirm_password %}error-input{% endif %}" />
-
               <span class="eye" onclick="togglePassword('confirm_password')">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" />
@@ -106,7 +95,6 @@
                 </svg>
               </span>
             </div>
-
             {% if errors.confirm_password %}
               <p class="error-text">{{ errors.confirm_password }}</p>
             {% endif %}
@@ -133,10 +121,10 @@
           </p>
         </div>
       </div>
+
       <script>
         function togglePassword(fieldId) {
           const input = document.getElementById(fieldId)
-        
           if (input.type === 'password') {
             input.type = 'text'
           } else {

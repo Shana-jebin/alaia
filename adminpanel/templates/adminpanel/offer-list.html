@@ -1,0 +1,1230 @@
+{% extends 'adminpanel/base_admin.html' %}
+{% load static %}
+
+{% block title %}Offers — ALAIA Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ═══════════════════════════════════════════════
+   ALAIA OFFER MANAGEMENT — DARK THEME
+   Matches: black bg, dark cards, gold accents
+═══════════════════════════════════════════════ */
+
+:root {
+  --bg:        #0a0a0a;
+  --surface:   #111111;
+  --surface2:  #1a1a1a;
+  --border:    #2a2a2a;
+  --border2:   #333333;
+  --gold:      #c9a96e;
+  --gold-dim:  #a07840;
+  --text:      #f0ede8;
+  --text-muted:#999999;
+  --text-dim:  #555555;
+  --green:     #2ecc71;
+  --red:       #e74c3c;
+  --blue:      #3498db;
+}
+
+/* ── Page shell ── */
+.of-wrap {
+  padding: 28px 32px;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+}
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #000000;
+  color: #ffffff;
+  font-family: 'Segoe UI', sans-serif;
+  min-height: 100vh;
+}
+
+.main-content {
+  background-color: #000000 !important;
+}
+
+/* ── Header ── */
+.of-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 28px;
+}
+
+.of-title-group {}
+.of-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -.3px;
+}
+.of-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+
+.btn-add-offer {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 20px;
+  background: var(--gold);
+  color: #1a0e00;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: .5px;
+  transition: background .15s, transform .1s;
+}
+.btn-add-offer:hover {
+  background: #d4b07a;
+  transform: translateY(-1px);
+}
+
+/* ── Stats row ── */
+.of-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.of-stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px 20px;
+  position: relative;
+  overflow: hidden;
+}
+.of-stat::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--gold);
+  opacity: 0;
+  transition: opacity .2s;
+}
+.of-stat:hover::before { opacity: 1; }
+.of-stat-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.of-stat-val {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text);
+}
+.of-stat-val.gold { color: var(--gold); }
+
+/* ── Tabs ── */
+.of-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  width: fit-content;
+  margin-bottom: 20px;
+  padding: 4px;
+}
+.of-tab {
+  padding: 9px 22px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  letter-spacing: .5px;
+  border-radius: 7px;
+  transition: all .15s;
+}
+.of-tab.active {
+  background: var(--gold);
+  color: #1a0e00;
+}
+.of-tab:not(.active):hover {
+  color: var(--text);
+  background: var(--surface2);
+}
+
+/* ── Section ── */
+.of-section { display: none; }
+.of-section.active { display: block; }
+
+/* ── Table wrapper ── */
+.of-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* ── Toolbar inside card ── */
+.of-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+}
+.of-search-wrap {
+  position: relative;
+  flex: 1;
+  max-width: 300px;
+}
+.of-search-wrap svg {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  color: var(--text-dim);
+}
+.of-search {
+  width: 100%;
+  padding: 8px 12px 8px 32px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 7px;
+  font-size: 12px;
+  color: var(--text);
+  outline: none;
+  transition: border-color .15s;
+}
+.of-search:focus { border-color: var(--gold); }
+.of-search::placeholder { color: var(--text-dim); }
+
+/* ── Table ── */
+.of-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.of-table thead tr {
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+}
+.of-table th {
+  padding: 10px 18px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.of-table td {
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: middle;
+}
+.of-table tbody tr:last-child td { border-bottom: none; }
+.of-table tbody tr {
+  transition: background .1s;
+}
+.of-table tbody tr:hover {
+  background: rgba(201,169,110,.04);
+}
+
+/* Product name cell */
+.of-prod-name {
+  font-weight: 600;
+  color: var(--text);
+}
+.of-prod-cat {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* Discount badge */
+.of-pct-badge {
+  display: inline-block;
+  background: rgba(201,169,110,.15);
+  color: var(--gold);
+  font-weight: 700;
+  font-size: 13px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(201,169,110,.25);
+}
+
+/* Date cell */
+.of-date {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Status badge */
+.of-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .4px;
+}
+.of-badge.active {
+  background: rgba(46,204,113,.12);
+  color: #2ecc71;
+  border: 1px solid rgba(46,204,113,.2);
+}
+.of-badge.inactive {
+  background: rgba(153,153,153,.1);
+  color: var(--text-muted);
+  border: 1px solid var(--border2);
+}
+.of-badge .dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Actions */
+.of-actions { display: flex; gap: 6px; }
+.ico-btn {
+  width: 32px; height: 32px;
+  border: 1px solid var(--border2);
+  border-radius: 7px;
+  background: var(--surface2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: all .15s;
+}
+.ico-btn:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+  background: rgba(201,169,110,.08);
+}
+.ico-btn.del:hover {
+  border-color: var(--red);
+  color: var(--red);
+  background: rgba(231,76,60,.08);
+}
+
+/* Empty state */
+.of-empty {
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--text-dim);
+}
+.of-empty svg {
+  width: 40px; height: 40px;
+  margin: 0 auto 12px;
+  display: block;
+  opacity: .3;
+}
+.of-empty p {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* ─────────────────────────────────────────
+   CATEGORY OFFERS TAB
+───────────────────────────────────────── */
+.cat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+  padding: 18px;
+}
+.cat-offer-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: border-color .15s;
+}
+.cat-offer-card:hover {
+  border-color: var(--border2);
+}
+.cat-offer-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.cat-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+.cat-cur-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+}
+.cat-cur-badge.has-offer {
+  background: rgba(201,169,110,.15);
+  color: var(--gold);
+  border: 1px solid rgba(201,169,110,.25);
+}
+.cat-cur-badge.no-offer {
+  background: var(--surface);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+}
+.cat-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cat-pct-input {
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 7px;
+  font-size: 12px;
+  color: var(--text);
+  outline: none;
+  transition: border-color .15s;
+}
+.cat-pct-input:focus { border-color: var(--gold); }
+.btn-set-offer {
+  padding: 8px 16px;
+  background: var(--gold);
+  color: #1a0e00;
+  border: none;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: .4px;
+  transition: background .15s;
+  white-space: nowrap;
+}
+.btn-set-offer:hover { background: #d4b07a; }
+
+/* ─────────────────────────────────────────
+   PAGINATION
+───────────────────────────────────────── */
+.of-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-top: 1px solid var(--border);
+}
+.of-page-info {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.of-page-controls { display: flex; gap: 4px; }
+.page-btn {
+  width: 32px; height: 32px;
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  background: var(--surface2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all .15s;
+}
+.page-btn:hover, .page-btn.active {
+  background: var(--gold);
+  color: #1a0e00;
+  border-color: var(--gold);
+  font-weight: 700;
+}
+.page-btn.disabled {
+  opacity: .35;
+  pointer-events: none;
+  cursor: default;
+}
+.page-dots {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+/* ─────────────────────────────────────────
+   MODAL
+───────────────────────────────────────── */
+.modal-bg {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.75);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(3px);
+}
+.modal-bg.open { display: flex; }
+
+.of-modal {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  padding: 0;
+  width: 480px;
+  max-width: 95vw;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0,0,0,.6);
+  animation: modalIn .2s ease;
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(-12px) scale(.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+.of-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+}
+.of-modal-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.of-modal-title-icon {
+  width: 28px; height: 28px;
+  background: rgba(201,169,110,.15);
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gold);
+}
+.modal-close-btn {
+  width: 30px; height: 30px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: all .15s;
+}
+.modal-close-btn:hover { border-color: var(--red); color: var(--red); }
+
+.of-modal-body { padding: 22px 24px; }
+
+/* err box */
+.err-box {
+  display: none;
+  background: rgba(231,76,60,.08);
+  border: 1px solid rgba(231,76,60,.25);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 12px;
+  color: #e74c3c;
+}
+.err-box.show { display: block; }
+.err-box ul { margin: 0; padding-left: 18px; }
+
+/* form fields */
+.of-field { margin-bottom: 16px; }
+.of-field label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 7px;
+}
+.of-field label span.req { color: var(--gold); }
+.of-field input,
+.of-field select {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text);
+  outline: none;
+  transition: border-color .15s;
+  box-sizing: border-box;
+}
+.of-field input:focus,
+.of-field select:focus { border-color: var(--gold); }
+.of-field select option { background: #1a1a1a; }
+.of-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* toggle */
+.of-toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 13px 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+.of-toggle-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+.sw-label {
+  position: relative;
+  display: inline-block;
+  width: 42px; height: 22px;
+  cursor: pointer;
+}
+.sw-label input { display: none; }
+.sw-track {
+  position: absolute; inset: 0;
+  background: var(--border2);
+  border-radius: 11px;
+  transition: background .2s;
+}
+.sw-label input:checked + .sw-track { background: var(--gold); }
+.sw-dot {
+  position: absolute;
+  left: 3px; top: 3px;
+  width: 16px; height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform .2s;
+}
+.sw-label input:checked ~ .sw-dot { transform: translateX(20px); }
+
+/* modal footer */
+.of-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+}
+.btn-cancel {
+  padding: 9px 20px;
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: all .15s;
+}
+.btn-cancel:hover { border-color: var(--text-muted); color: var(--text); }
+.btn-save {
+  padding: 9px 22px;
+  background: var(--gold);
+  color: #1a0e00;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: .3px;
+  transition: background .15s;
+}
+.btn-save:hover { background: #d4b07a; }
+
+/* ── Confirm modal ── */
+.confirm-modal {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  padding: 32px;
+  width: 380px;
+  max-width: 95vw;
+  text-align: center;
+  animation: modalIn .2s ease;
+}
+.confirm-icon {
+  width: 52px; height: 52px;
+  background: rgba(231,76,60,.1);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 16px;
+  color: var(--red);
+}
+.confirm-modal h4 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.confirm-modal p {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+.confirm-modal p strong { color: var(--text); }
+.confirm-btns { display: flex; gap: 10px; justify-content: center; }
+.btn-confirm-del {
+  padding: 9px 22px;
+  background: var(--red);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .15s;
+}
+.btn-confirm-del:hover { background: #c0392b; }
+
+/* ── Toast ── */
+.of-toast {
+  position: fixed;
+  bottom: 24px; right: 24px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  box-shadow: 0 8px 30px rgba(0,0,0,.5);
+  z-index: 9999;
+  transform: translateY(20px);
+  opacity: 0;
+  pointer-events: none;
+  transition: all .3s ease;
+}
+.of-toast.show {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+.of-toast.success .t-dot { background: var(--green); }
+.of-toast.error .t-dot   { background: var(--red); }
+.t-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+</style>
+{% endblock %}
+
+
+{% block content %}
+<div class="of-wrap">
+
+  <!-- Header -->
+  <div class="of-header">
+    <div class="of-title-group">
+      <div class="of-title">Offer Management</div>
+      <div class="of-sub">Manage product and category discounts from one place</div>
+    </div>
+    <button class="btn-add-offer" onclick="openCreate()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      New Product Offer
+    </button>
+  </div>
+
+  <!-- Stats -->
+  <div class="of-stats">
+    <div class="of-stat">
+      <div class="of-stat-label">Total Product Offers</div>
+      <div class="of-stat-val gold">{{ total_offers }}</div>
+    </div>
+    <div class="of-stat">
+      <div class="of-stat-label">Active Offers</div>
+      <div class="of-stat-val">{{ active_offers }}</div>
+    </div>
+    <div class="of-stat">
+      <div class="of-stat-label">Categories with Offer</div>
+      <div class="of-stat-val">{{ cats_with_offer }}</div>
+    </div>
+    <div class="of-stat">
+      <div class="of-stat-label">Expired Offers</div>
+      <div class="of-stat-val">{{ expired_offers }}</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="of-tabs">
+    <button class="of-tab active" onclick="switchTab('products', this)">Product Offers</button>
+    <button class="of-tab"        onclick="switchTab('categories', this)">Category Offers</button>
+  </div>
+
+  <!-- ═══════ PRODUCT OFFERS TAB ═══════ -->
+  <div class="of-section active" id="tab-products">
+    <div class="of-card">
+
+      <!-- Toolbar -->
+      <div class="of-toolbar">
+        <div class="of-search-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input type="text" class="of-search" id="productSearch"
+                 placeholder="Search by product name…"
+                 value="{{ q }}"
+                 oninput="debounceSearch(this.value)">
+        </div>
+        <span style="font-size:11px;color:var(--text-muted)">
+          {{ page_obj.paginator.count }} offer{{ page_obj.paginator.count|pluralize }}
+        </span>
+      </div>
+
+      <!-- Table -->
+      <table class="of-table">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Discount</th>
+            <th>Valid From</th>
+            <th>Valid To</th>
+            <th>Status</th>
+            <th style="text-align:right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for offer in page_obj %}
+          <tr id="pr-row-{{ offer.pk }}">
+            <td>
+              <div class="of-prod-name">{{ offer.product.name }}</div>
+              <div class="of-prod-cat">{{ offer.product.category.name|default:"—" }}</div>
+            </td>
+            <td>
+              <span class="of-pct-badge">{{ offer.discount_percentage }}%</span>
+            </td>
+            <td class="of-date">{{ offer.valid_from|date:"d M Y"|default:"—" }}</td>
+            <td class="of-date">{{ offer.valid_to|date:"d M Y"|default:"—" }}</td>
+            <td>
+              <span class="of-badge {% if offer.is_currently_active %}active{% else %}inactive{% endif %}"
+                    id="pr-badge-{{ offer.pk }}">
+                <span class="dot"></span>
+                {% if offer.is_currently_active %}Active{% else %}Inactive{% endif %}
+              </span>
+            </td>
+            <td>
+              <div class="of-actions" style="justify-content:flex-end">
+                <button class="ico-btn" title="Toggle active"
+                        onclick="toggleOffer({{ offer.pk }})">
+                  <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M18.36 6.64A9 9 0 115.64 17.36"/><path d="M12 2v10"/>
+                  </svg>
+                </button>
+                <button class="ico-btn del" title="Delete"
+                        onclick="confirmDeleteOffer({{ offer.pk }}, '{{ offer.product.name|escapejs }}')">
+                  <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6l-1 14H6L5 6"/>
+                    <path d="M8 6V4h8v2"/>
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6">
+              <div class="of-empty">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 0 1 0 8h-1"/>
+                </svg>
+                <p>No product offers yet. Create your first one above.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <!-- Pagination -->
+      {% if page_obj.has_other_pages %}
+      <div class="of-pagination">
+        <div class="of-page-info">
+          Showing <strong>{{ page_obj.start_index }}–{{ page_obj.end_index }}</strong>
+          of <strong>{{ page_obj.paginator.count }}</strong> offers
+        </div>
+        <div class="of-page-controls">
+          {% if page_obj.has_previous %}
+          <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}" class="page-btn">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+          </a>
+          {% else %}
+          <span class="page-btn disabled">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+          </span>
+          {% endif %}
+
+          {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+              <span class="page-btn active">{{ num }}</span>
+            {% elif num == 1 or num == page_obj.paginator.num_pages or num >= page_obj.number|add:"-2" and num <= page_obj.number|add:"2" %}
+              <a href="?page={{ num }}&q={{ q }}" class="page-btn">{{ num }}</a>
+            {% elif num == page_obj.number|add:"-3" or num == page_obj.number|add:"3" %}
+              <span class="page-dots">…</span>
+            {% endif %}
+          {% endfor %}
+
+          {% if page_obj.has_next %}
+          <a href="?page={{ page_obj.next_page_number }}&q={{ q }}" class="page-btn">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </a>
+          {% else %}
+          <span class="page-btn disabled">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </span>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ═══════ CATEGORY OFFERS TAB ═══════ -->
+  <div class="of-section" id="tab-categories">
+    <div class="of-card">
+      <div class="of-toolbar">
+        <span style="font-size:12px;color:var(--text-muted);font-weight:600">
+          {{ categories|length }} categor{{ categories|length|pluralize:"y,ies" }}
+        </span>
+        <span style="font-size:11px;color:var(--text-dim)">
+          Set 0% to remove an offer
+        </span>
+      </div>
+      <div class="cat-grid">
+        {% for cat in categories %}
+        <div class="cat-offer-card">
+          <div class="cat-offer-top">
+            <div class="cat-name">{{ cat.name }}</div>
+            <span class="cat-cur-badge {% if cat.offer_percentage > 0 %}has-offer{% else %}no-offer{% endif %}"
+                  id="cat-badge-{{ cat.pk }}">
+              {% if cat.offer_percentage > 0 %}{{ cat.offer_percentage }}% off{% else %}No offer{% endif %}
+            </span>
+          </div>
+          <div class="cat-input-row">
+            <input type="number" class="cat-pct-input"
+                   id="cat-pct-{{ cat.pk }}"
+                   value="{{ cat.offer_percentage }}"
+                   min="0" max="99"
+                   placeholder="Enter % (0 to remove)">
+            <button class="btn-set-offer"
+                    onclick="setCategoryOffer({{ cat.pk }}, '{{ cat.name|escapejs }}')">
+              Apply
+            </button>
+          </div>
+        </div>
+        {% empty %}
+        <div style="padding:40px;color:var(--text-dim);text-align:center;grid-column:1/-1">
+          No categories found.
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+</div><!-- /of-wrap -->
+
+
+<!-- ═══════ CREATE OFFER MODAL ═══════ -->
+<div class="modal-bg" id="createModal">
+  <div class="of-modal">
+    <div class="of-modal-head">
+      <div class="of-modal-title">
+        <div class="of-modal-title-icon">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 0 1 0 8h-1"/>
+          </svg>
+        </div>
+        New Product Offer
+      </div>
+      <button class="modal-close-btn" onclick="closeModal('createModal')">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="of-modal-body">
+      <div class="err-box" id="createErrors"><ul id="createErrList"></ul></div>
+
+      <form id="createForm">
+        {% csrf_token %}
+
+        <div class="of-field">
+          <label>Product <span class="req">*</span></label>
+          <select name="product_id" id="fProduct">
+            <option value="">— Select a product —</option>
+            {% for p in products %}
+            <option value="{{ p.pk }}">{{ p.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="of-field">
+          <label>Discount Percentage <span class="req">*</span></label>
+          <input type="number" name="discount_percentage" id="fPct"
+                 min="1" max="99" placeholder="e.g. 20">
+        </div>
+
+        <div class="of-field-row">
+          <div class="of-field">
+            <label>Valid From</label>
+            <input type="datetime-local" name="valid_from" id="fFrom">
+          </div>
+          <div class="of-field">
+            <label>Valid To</label>
+            <input type="datetime-local" name="valid_to" id="fTo">
+          </div>
+        </div>
+
+        <div class="of-toggle-row">
+          <div class="of-toggle-label">Active immediately</div>
+          <label class="sw-label">
+            <input type="checkbox" name="is_active" id="fActive" checked>
+            <div class="sw-track"></div>
+            <div class="sw-dot"></div>
+          </label>
+        </div>
+      </form>
+    </div>
+
+    <div class="of-modal-footer">
+      <button type="button" class="btn-cancel" onclick="closeModal('createModal')">Cancel</button>
+      <button type="button" class="btn-save" onclick="submitCreate()">Create Offer</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════ CONFIRM DELETE MODAL ═══════ -->
+<div class="modal-bg" id="confirmModal">
+  <div class="confirm-modal">
+    <div class="confirm-icon">
+      <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <polyline points="3 6 5 6 21 6"/>
+        <path d="M19 6l-1 14H6L5 6"/>
+        <path d="M8 6V4h8v2"/>
+        <line x1="10" y1="11" x2="10" y2="17"/>
+        <line x1="14" y1="11" x2="14" y2="17"/>
+      </svg>
+    </div>
+    <h4>Delete Offer</h4>
+    <p>Remove offer for <strong id="confirmProdName"></strong>?<br>
+       This cannot be undone.</p>
+    <div class="confirm-btns">
+      <button class="btn-cancel" onclick="closeModal('confirmModal')">Cancel</button>
+      <button class="btn-confirm-del" id="confirmDelBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════ TOAST ═══════ -->
+<div class="of-toast" id="ofToast">
+  <span class="t-dot"></span>
+  <span id="ofToastMsg">Done</span>
+</div>
+
+{% endblock %}
+
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+const CSRF = () => document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+/* ── Tab switch ── */
+function switchTab(name, btn) {
+  document.querySelectorAll('.of-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.of-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+/* ── Modal helpers ── */
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.modal-bg').forEach(bg => {
+  bg.addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('open');
+  });
+});
+
+/* ── Search debounce ── */
+let _st;
+function debounceSearch(val) {
+  clearTimeout(_st);
+  _st = setTimeout(() => {
+    const url = new URL(window.location.href);
+    if (val.trim()) url.searchParams.set('q', val.trim());
+    else url.searchParams.delete('q');
+    url.searchParams.delete('page');
+    window.location.href = url.toString();
+  }, 420);
+}
+
+/* ── Create offer ── */
+function openCreate() {
+  document.getElementById('createErrors').classList.remove('show');
+  document.getElementById('createErrList').innerHTML = '';
+  document.getElementById('createForm').reset();
+  document.getElementById('fActive').checked = true;
+  document.getElementById('createModal').classList.add('open');
+}
+
+function submitCreate() {
+  const fd = new FormData(document.getElementById('createForm'));
+  const errBox  = document.getElementById('createErrors');
+  const errList = document.getElementById('createErrList');
+  errBox.classList.remove('show');
+  errList.innerHTML = '';
+
+  fetch("{% url 'admin_offer_create' %}", {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF() },
+    body: fd,
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      closeModal('createModal');
+      showToast(d.message, 'success');
+      setTimeout(() => location.reload(), 900);
+    } else {
+      (d.errors || ['Unknown error']).forEach(msg => {
+        const li = document.createElement('li');
+        li.textContent = msg;
+        errList.appendChild(li);
+      });
+      errBox.classList.add('show');
+    }
+  })
+  .catch(() => showToast('Network error. Try again.', 'error'));
+}
+
+/* ── Toggle offer ── */
+function toggleOffer(pk) {
+  fetch(`/admin-panel/offers/${pk}/toggle/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF() },
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (!d.success) return;
+    const badge = document.getElementById('pr-badge-' + pk);
+    badge.className = 'of-badge ' + (d.is_active ? 'active' : 'inactive');
+    badge.innerHTML = `<span class="dot"></span>${d.is_active ? 'Active' : 'Inactive'}`;
+    showToast(d.is_active ? 'Offer activated.' : 'Offer deactivated.', 'success');
+  });
+}
+
+/* ── Delete offer (confirm) ── */
+let _pendingDeletePk = null;
+
+function confirmDeleteOffer(pk, name) {
+  _pendingDeletePk = pk;
+  document.getElementById('confirmProdName').textContent = name;
+  document.getElementById('confirmModal').classList.add('open');
+}
+
+document.getElementById('confirmDelBtn').addEventListener('click', function() {
+  if (!_pendingDeletePk) return;
+  fetch(`/admin-panel/offers/${_pendingDeletePk}/delete/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF() },
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      const row = document.getElementById('pr-row-' + _pendingDeletePk);
+      if (row) {
+        row.style.transition = 'opacity .3s';
+        row.style.opacity = '0';
+        setTimeout(() => row.remove(), 300);
+      }
+      showToast('Offer deleted.', 'success');
+    }
+    closeModal('confirmModal');
+    _pendingDeletePk = null;
+  });
+});
+
+/* ── Category offer ── */
+function setCategoryOffer(pk, name) {
+  const pct = document.getElementById('cat-pct-' + pk).value;
+  const fd  = new FormData();
+  fd.append('offer_percentage', pct);
+
+  fetch(`/admin-panel/categories/${pk}/set-offer/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF() },
+    body: fd,
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      const badge = document.getElementById('cat-badge-' + pk);
+      const p = parseInt(pct);
+      badge.className = 'cat-cur-badge ' + (p > 0 ? 'has-offer' : 'no-offer');
+      badge.textContent = p > 0 ? `${p}% off` : 'No offer';
+      showToast(`"${name}" offer set to ${p}%.`, 'success');
+    } else {
+      showToast((d.errors || ['Error']).join(', '), 'error');
+    }
+  });
+}
+
+/* ── Toast ── */
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('ofToast');
+  document.getElementById('ofToastMsg').textContent = msg;
+  t.className = `of-toast ${type}`;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 3200);
+}
+</script>
+{% endblock %}

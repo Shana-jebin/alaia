@@ -65,12 +65,11 @@ def product_list(request):
         .filter(
             is_deleted=False,
             is_active=True,
-            category__is_active=True,
             category__is_deleted=False,
             brand__is_active=True,
         )
         .select_related('brand', 'category')
-        .prefetch_related('variants__images')
+        .prefetch_related('variants__images', 'variants')
     )
    
     if search_query:
@@ -244,15 +243,11 @@ def product_list(request):
 def product_detail(request, slug):
     product = get_object_or_404(Product, slug=slug)   
 
-    if (
-        not product.is_active or
-        product.is_deleted or
-        not product.category.is_active or
-        product.category.is_deleted or
-        not product.brand.is_active
-    ):
+    if product.is_deleted or not product.is_active or not product.brand.is_active:
         return redirect('products:product_list')
 
+    # Category inactive or deleted = show as sold out, don't redirect
+    is_blocked = product.category.is_deleted or not product.category.is_active
     variants = (
         product.variants
         .filter(is_deleted=False)
@@ -260,6 +255,12 @@ def product_detail(request, slug):
         .order_by('price')
     )
     default_variant = variants.filter(stock__gt=0).first() or variants.first()
+
+    if default_variant and not default_variant.images.exists():
+        for v in variants:
+            if v.images.exists():
+                default_variant = v
+                break
 
    
     reviews = (
@@ -295,8 +296,9 @@ def product_detail(request, slug):
 
    
     total_stock  = product.total_stock
+    is_blocked   = product.category.is_deleted or not product.category.is_active
     stock_status = (
-        'out_of_stock' if total_stock == 0
+        'out_of_stock' if (total_stock == 0 or is_blocked)
         else 'low_stock'  if total_stock <= 10
         else 'in_stock'
     )
@@ -319,6 +321,7 @@ def product_detail(request, slug):
         'coupons':          coupons,
         'total_stock':      total_stock,
         'stock_status':     stock_status,
+        'is_blocked':       is_blocked, 
         'user_reviewed':    user_reviewed,
     })
 
@@ -367,9 +370,9 @@ def submit_review(request, product_id):
             user=request.user,
             rating=rating,
             comment=comment,
-            is_approved=False,   # admin approves before it shows
+            is_approved=True,   
         )
-        return JsonResponse({'success': True, 'message': 'Review submitted — it will appear after approval.'})
+        return JsonResponse({'success': True, 'message': 'Review submitted successfully!'})
 
     except (ValueError, KeyError, json.JSONDecodeError):
         return JsonResponse({'error': 'Invalid request data.'}, status=400)

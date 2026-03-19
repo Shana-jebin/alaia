@@ -161,5 +161,11 @@ LOGIN_REDIRECT_URL = '/profile/'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+RAZORPAY_KEY_ID = "rzp_test_SRvj1HTeijx2cP"
+RAZORPAY_KEY_SECRET = "NwzuBfE24av2JZLa71xaJAuR"
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://api.razorpay.com',
+    'http://127.0.0.1:8000',
+]
 

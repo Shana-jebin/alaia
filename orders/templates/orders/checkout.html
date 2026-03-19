@@ -6,12 +6,70 @@
 {% block extra_css %}
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'orders/checkout.css' %}">
+<style>
+  /* ── Wallet option extras ── */
+  .wallet-bal-badge {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 9px;
+    background: #eafaf1;
+    color: #27ae60;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .3px;
+  }
+
+  .wallet-bal-badge.zero {
+    background: #f5f5f5;
+    color: #aaa;
+  }
+
+  .pay-option.disabled {
+    opacity: .45;
+    pointer-events: none;
+    cursor: not-allowed;
+  }
+
+  .wallet-warning {
+    display: none;
+    margin-top: 10px;
+    padding: 10px 14px;
+    background: #fff5f5;
+    border: 1px solid #fcc;
+    border-radius: 8px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+    color: #c0392b;
+    line-height: 1.5;
+  }
+
+  /* ── Remove coupon button ── */
+  .coupon-remove {
+    display: none;
+    margin-left: 10px;
+    padding: 0 10px;
+    background: none;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 11px;
+    color: #e74c3c;
+    cursor: pointer;
+    font-family: 'Montserrat', sans-serif;
+    transition: border-color .15s;
+  }
+
+  .coupon-remove:hover { border-color: #e74c3c; }
+  .coupon-remove.show  { display: inline-block; }
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="co-wrap">
 
-  <!-- LEFT: Form -->
+  <!-- ══════════════════════════════════════
+       LEFT: Form
+  ══════════════════════════════════════ -->
   <div class="co-left">
     <h1 class="co-title">Checkout</h1>
 
@@ -19,20 +77,23 @@
       {% csrf_token %}
       <input type="hidden" name="coupon_code" id="appliedCouponCode">
 
-      <!-- 1. Delivery Address -->
+      <!-- 1. Delivery Address ─────────────── -->
       <div class="section-block">
         <div class="section-label">Delivery Address</div>
 
         {% if addresses %}
         <div class="addr-grid">
           {% for addr in addresses %}
-          <label class="addr-card {% if addr == default_address %}selected{% endif %}" id="addr-label-{{ addr.id }}">
+          <label class="addr-card {% if addr == default_address %}selected{% endif %}"
+                 id="addr-label-{{ addr.id }}">
             <input type="radio" name="address_id" value="{{ addr.id }}"
                    {% if addr == default_address %}checked{% endif %}
                    onchange="selectAddr({{ addr.id }})">
             <div class="addr-top">
               <div class="addr-name">{{ addr.full_name }}</div>
-              {% if addr.is_default %}<span class="addr-default-badge">Default</span>{% endif %}
+              {% if addr.is_default %}
+                <span class="addr-default-badge">Default</span>
+              {% endif %}
             </div>
             <div class="addr-text">
               {{ addr.address_line1 }}{% if addr.address_line2 %}, {{ addr.address_line2 }}{% endif %}<br>
@@ -51,42 +112,88 @@
 
         <a href="{% url 'add_address' %}?next=/orders/checkout/" class="btn-add-addr">
           <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
           Add New Address
         </a>
       </div>
 
-      <!-- 2. Payment Method -->
+      <!-- 2. Payment Method ───────────────── -->
       <div class="section-block">
         <div class="section-label">Payment Method</div>
         <div class="pay-grid">
+
+          <!-- COD -->
           <label class="pay-option selected" id="pay-cod">
-            <input type="radio" name="payment_method" value="cod" checked onchange="selectPay('cod')">
+            <input type="radio" name="payment_method" value="cod" checked
+                   onchange="selectPay('cod')">
             <div class="pay-dot"></div>
             <div class="pay-info">
               <div class="pay-label">Cash on Delivery</div>
               <div class="pay-sub">Pay when your order arrives</div>
             </div>
-         
           </label>
-         <label class="pay-option" id="pay-online">
-           <input type="radio" name="payment_method" value="online" onchange="selectPay('online')">
+
+          <!-- Online / Razorpay -->
+          <label class="pay-option" id="pay-online">
+            <input type="radio" name="payment_method" value="online"
+                   onchange="selectPay('online')">
             <div class="pay-dot"></div>
             <div class="pay-info">
-              <div class="pay-label">Online Payment <span style="font-size:9px;color:var(--muted);">(Coming Soon)</span></div>
-              <div class="pay-sub">Cards, UPI, Net Banking</div>
+              <div class="pay-label">Online Payment</div>
+              <div class="pay-sub">Cards, UPI, Net Banking via Razorpay</div>
             </div>
           </label>
+
+          <!-- Wallet -->
+          <label class="pay-option {% if not wallet or wallet.balance <= 0 %}disabled{% endif %}"
+                 id="pay-wallet">
+            <input type="radio" name="payment_method" value="wallet"
+                   onchange="selectPay('wallet')"
+                   {% if not wallet or wallet.balance <= 0 %}disabled{% endif %}>
+            <div class="pay-dot"></div>
+            <div class="pay-info">
+              <div class="pay-label">
+                Wallet
+                {% if wallet %}
+                  <span class="wallet-bal-badge {% if wallet.balance <= 0 %}zero{% endif %}">
+                    ₹{{ wallet.balance|floatformat:0 }}
+                  </span>
+                {% else %}
+                  <span class="wallet-bal-badge zero">₹0</span>
+                {% endif %}
+              </div>
+              <div class="pay-sub">
+                {% if wallet and wallet.balance > 0 %}
+                  Available balance: ₹{{ wallet.balance|floatformat:0 }}
+                {% else %}
+                  No balance — refunds from returns/cancellations appear here
+                {% endif %}
+              </div>
+            </div>
+          </label>
+
+        </div>
+
+        <!-- Shown when wallet selected but balance insufficient -->
+        <div class="wallet-warning" id="walletWarning">
+          ⚠️ Your wallet balance (₹{% if wallet %}{{ wallet.balance|floatformat:0 }}{% else %}0{% endif %})
+          is less than the order total. Please choose another payment method or reduce your order.
         </div>
       </div>
-      <!-- 3. Coupon -->
+
+      <!-- 3. Coupon ────────────────────────── -->
       <div class="section-block">
         <div class="section-label">Promo Code</div>
         <div class="coupon-wrap">
-          <input type="text" class="coupon-input" id="couponInput" placeholder="Enter coupon code"
+          <input type="text" class="coupon-input" id="couponInput"
+                 placeholder="Enter coupon code"
                  oninput="this.value=this.value.toUpperCase()">
-          <button type="button" class="coupon-btn" onclick="applyCoupon()">Apply</button>
+          <button type="button" class="coupon-btn" id="couponApplyBtn"
+                  onclick="applyCoupon()">Apply</button>
+          <button type="button" class="coupon-remove" id="couponRemoveBtn"
+                  onclick="removeCoupon()">✕ Remove</button>
         </div>
         <div class="coupon-msg" id="couponMsg"></div>
 
@@ -95,8 +202,11 @@
           {% for c in coupons %}
           <div class="coupon-pill" onclick="useCoupon('{{ c.code }}')">
             {{ c.code }} ·
-            {% if c.discount_type == 'percent' %}{{ c.discount_value|floatformat:0 }}% off
-            {% else %}₹{{ c.discount_value|floatformat:0 }} off{% endif %}
+            {% if c.discount_type == 'percent' %}
+              {{ c.discount_value|floatformat:0 }}% off
+            {% else %}
+              ₹{{ c.discount_value|floatformat:0 }} off
+            {% endif %}
           </div>
           {% endfor %}
         </div>
@@ -106,7 +216,9 @@
     </form>
   </div>
 
-  <!-- RIGHT: Summary -->
+  <!-- ══════════════════════════════════════
+       RIGHT: Order Summary
+  ══════════════════════════════════════ -->
   <div class="co-summary">
     <div class="co-sum-title">Order Summary</div>
 
@@ -115,27 +227,39 @@
       <div class="co-item">
         <div class="co-item-img">
           {% if item.variant.images.first %}
-            <img src="{{ item.variant.images.first.image.url }}" alt="{{ item.variant.product.name }}">
+            <img src="{{ item.variant.images.first.image.url }}"
+                 alt="{{ item.variant.product.name }}">
           {% endif %}
         </div>
         <div class="co-item-info">
           <div class="co-item-name">{{ item.variant.product.name }}</div>
-          <div class="co-item-meta">{{ item.variant.color|title }} / {{ item.variant.size }} · Qty {{ item.quantity }}</div>
+          <div class="co-item-meta">
+            {{ item.variant.color|title }} / {{ item.variant.size }} · Qty {{ item.quantity }}
+          </div>
         </div>
         <div class="co-item-price">₹{{ item.subtotal|floatformat:0 }}</div>
       </div>
       {% endfor %}
     </div>
 
-    <div class="sum-row"><span>Subtotal</span><span>₹{{ subtotal|floatformat:0 }}</span></div>
+    <div class="sum-row">
+      <span>Subtotal</span>
+      <span>₹{{ subtotal|floatformat:0 }}</span>
+    </div>
+
+    <!-- Coupon discount row — hidden until coupon applied -->
     <div class="sum-row" id="discountRow" style="display:none;">
       <span id="discountLabel">Discount</span>
       <span id="discountAmt" style="color:#27ae60;"></span>
     </div>
+
     <div class="sum-row">
       <span>Shipping</span>
-      <span>{% if shipping == 0 %}Free{% else %}₹{{ shipping }}{% endif %}</span>
+      <span id="shippingDisplay">
+        {% if shipping == 0 %}Free{% else %}₹{{ shipping|floatformat:0 }}{% endif %}
+      </span>
     </div>
+
     <div class="sum-row total">
       <span>Total</span>
       <span id="grandTotal">₹{{ total|floatformat:0 }}</span>
@@ -147,8 +271,10 @@
     </button>
 
     <div class="secure-note">
-      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      <svg width="12" height="12" fill="none" stroke="currentColor"
+           stroke-width="1.5" viewBox="0 0 24 24">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
       </svg>
       Secure &amp; encrypted checkout
     </div>
@@ -159,29 +285,47 @@
 
 {% block extra_js %}
 <script>
-const CSRF = () => document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
-const SUBTOTAL = {{ subtotal }};
-const SHIPPING = {{ shipping }};
-let appliedDiscount = 0;
-let appliedCode = '';
+// ── Constants ──────────────────────────────────────────────────
+const CSRF         = () => document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+const SUBTOTAL     = {{ subtotal }};
+const SHIPPING     = {{ shipping }};
+const WALLET_BAL   = {{ wallet.balance|default:0 }};
 
+let appliedDiscount = 0;
+let appliedCode     = '';
+
+// ── Address ────────────────────────────────────────────────────
 function selectAddr(id) {
   document.querySelectorAll('.addr-card').forEach(c => c.classList.remove('selected'));
   document.getElementById('addr-label-' + id).classList.add('selected');
 }
 
+// ── Payment method ─────────────────────────────────────────────
 function selectPay(val) {
-  document.querySelectorAll('.pay-option').forEach(p => {
-    p.classList.remove('selected');
-  });
+  document.querySelectorAll('.pay-option').forEach(p => p.classList.remove('selected'));
 
-  const selected = document.getElementById('pay-' + val);
-  selected.classList.add('selected');
+  const el = document.getElementById('pay-' + val);
+  if (!el) return;
+  el.classList.add('selected');
+  el.querySelector('input').checked = true;
 
-  const radio = selected.querySelector('input');
-  radio.checked = true;
+  // Wallet warning & place-order button state
+  const warning  = document.getElementById('walletWarning');
+  const placeBtn = document.getElementById('placeBtn');
+  const total    = SUBTOTAL + SHIPPING - appliedDiscount;
+
+  if (val === 'wallet' && WALLET_BAL < total) {
+    warning.style.display  = 'block';
+    placeBtn.disabled      = true;
+    placeBtn.textContent   = 'Insufficient Wallet Balance';
+  } else {
+    warning.style.display  = 'none';
+    placeBtn.disabled      = false;
+    placeBtn.textContent   = 'Place Order';
+  }
 }
 
+// ── Coupon ─────────────────────────────────────────────────────
 function useCoupon(code) {
   document.getElementById('couponInput').value = code;
   applyCoupon();
@@ -189,63 +333,111 @@ function useCoupon(code) {
 
 function applyCoupon() {
   const code = document.getElementById('couponInput').value.trim().toUpperCase();
-  const msg = document.getElementById('couponMsg');
-  if (!code) { msg.textContent = 'Please enter a coupon code.'; msg.className = 'coupon-msg err'; return; }
+  const msg  = document.getElementById('couponMsg');
+
+  if (!code) {
+    msg.textContent = 'Please enter a coupon code.';
+    msg.className   = 'coupon-msg err';
+    return;
+  }
+
+  // Prevent applying another coupon if one is already applied
+  if (appliedCode) {
+    msg.textContent = `Coupon "${appliedCode}" is already applied. Remove it first.`;
+    msg.className   = 'coupon-msg err';
+    return;
+  }
 
   fetch("{% url 'orders:apply_coupon' %}", {
-    method: 'POST',
+    method:  'POST',
     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF() },
-    body: JSON.stringify({ code, subtotal: SUBTOTAL })
+    body:    JSON.stringify({ code, subtotal: SUBTOTAL }),
   })
   .then(r => r.json())
   .then(d => {
     if (d.success) {
       appliedDiscount = d.discount;
-      appliedCode = d.code;
+      appliedCode     = d.code;
       document.getElementById('appliedCouponCode').value = appliedCode;
+      document.getElementById('couponInput').value       = appliedCode;
+      document.getElementById('couponInput').readOnly    = true;
+      document.getElementById('couponApplyBtn').style.display  = 'none';
+      document.getElementById('couponRemoveBtn').classList.add('show');
       msg.textContent = d.message;
-      msg.className = 'coupon-msg ok';
+      msg.className   = 'coupon-msg ok';
       updateTotals();
     } else {
-      appliedDiscount = 0;
-      appliedCode = '';
-      document.getElementById('appliedCouponCode').value = '';
       msg.textContent = d.error;
-      msg.className = 'coupon-msg err';
-      updateTotals();
+      msg.className   = 'coupon-msg err';
     }
   })
-  .catch(() => { msg.textContent = 'Something went wrong.'; msg.className = 'coupon-msg err'; });
+  .catch(() => {
+    msg.textContent = 'Something went wrong. Please try again.';
+    msg.className   = 'coupon-msg err';
+  });
 }
 
+function removeCoupon() {
+  appliedDiscount = 0;
+  appliedCode     = '';
+  document.getElementById('appliedCouponCode').value          = '';
+  document.getElementById('couponInput').value                = '';
+  document.getElementById('couponInput').readOnly             = false;
+  document.getElementById('couponApplyBtn').style.display     = '';
+  document.getElementById('couponRemoveBtn').classList.remove('show');
+
+  const msg       = document.getElementById('couponMsg');
+  msg.textContent = 'Coupon removed.';
+  msg.className   = 'coupon-msg';
+
+  updateTotals();
+
+  // Re-check wallet state after discount removed
+  const currentMethod = document.querySelector('input[name=payment_method]:checked')?.value;
+  if (currentMethod) selectPay(currentMethod);
+}
+
+// ── Totals ──────────────────────────────────────────────────────
 function updateTotals() {
-  const discRow = document.getElementById('discountRow');
-  const discAmt = document.getElementById('discountAmt');
+  const discRow   = document.getElementById('discountRow');
+  const discAmt   = document.getElementById('discountAmt');
   const discLabel = document.getElementById('discountLabel');
-  const grandTotal = document.getElementById('grandTotal');
+  const grandTotal= document.getElementById('grandTotal');
 
   if (appliedDiscount > 0) {
     discRow.style.display = 'flex';
     discLabel.textContent = `Discount (${appliedCode})`;
-    discAmt.textContent = `- ₹${appliedDiscount.toFixed(0)}`;
-    grandTotal.textContent = `₹${(SUBTOTAL + SHIPPING - appliedDiscount).toFixed(0)}`;
+    discAmt.textContent   = `− ₹${appliedDiscount.toFixed(0)}`;
   } else {
     discRow.style.display = 'none';
-    grandTotal.textContent = `₹${(SUBTOTAL + SHIPPING).toFixed(0)}`;
   }
+
+  const newTotal = SUBTOTAL + SHIPPING - appliedDiscount;
+  grandTotal.textContent = `₹${Math.max(newTotal, 0).toFixed(0)}`;
 }
 
-// Confirm before place order
+// ── Form submit ─────────────────────────────────────────────────
 document.getElementById('checkoutForm').addEventListener('submit', function(e) {
+  // Address check
   const addrSelected = document.querySelector('input[name=address_id]:checked');
   if (!addrSelected) {
     e.preventDefault();
     alert('Please select a delivery address.');
     return;
   }
-  const btn = document.getElementById('placeBtn');
-  btn.disabled = true;
-  btn.textContent = 'Placing Order...';
+
+  // Wallet balance re-check (edge case)
+  const method = document.querySelector('input[name=payment_method]:checked')?.value;
+  const total  = SUBTOTAL + SHIPPING - appliedDiscount;
+  if (method === 'wallet' && WALLET_BAL < total) {
+    e.preventDefault();
+    alert('Insufficient wallet balance. Please choose another payment method.');
+    return;
+  }
+
+  const btn       = document.getElementById('placeBtn');
+  btn.disabled    = true;
+  btn.textContent = 'Placing Order…';
 });
 </script>
 {% endblock %}

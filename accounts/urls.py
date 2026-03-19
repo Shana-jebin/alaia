@@ -13,6 +13,7 @@ urlpatterns = [
     path('forgot-otp/',views.forgot_otp,name='forgot-otp'),
     path('resend-forgot-otp/', views.resend_forgot_otp, name='resend_forgot_otp'),
     path('logout/', views.logout_view, name='logout'),
+    path('referral/', views.referral_page, name='referral_page'),
 
     
 

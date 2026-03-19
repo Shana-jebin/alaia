@@ -455,8 +455,7 @@ function addVariant() {
             </div>
             <div class="form-group">
                 <label class="form-label">Size <span class="required">*</span></label>
-                <select class="form-select v-size">
-    <option value="">Select Size</option>
+ <select class="form-select v-size size-select" multiple>
     <option value="3">3</option>
     <option value="4">4</option>
     <option value="5">5</option>
@@ -506,6 +505,11 @@ function addVariant() {
         </div>
     `;
     container.appendChild(div);
+    new TomSelect(div.querySelector(".size-select"), {
+    plugins: ['remove_button'],
+    create: false,
+    persist: false
+});
     const uploadArea = div.querySelector('.image-upload-area');
 const fileInput = div.querySelector(`#imgInput-${n}`);
 
@@ -660,21 +664,24 @@ if (submitBtn) {
             if (errEl) errEl.style.display = 'inline';
             card.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-        const color = card.querySelector('.v-color').value.trim();
-const size = card.querySelector('.v-size').value.trim();
+const color = card.querySelector('.v-color').value.trim();
+
+const sizeSelect = card.querySelector('.v-size');
+const sizes = Array.from(sizeSelect.selectedOptions).map(opt => opt.value);
+
 const price = parseFloat(card.querySelector('.v-price').value);
 const stock = parseInt(card.querySelector('.v-stock').value);
 
-if (!color || !size || !price || stock === null || stock === '') {
+if (!color || sizes.length === 0 || !price || stock === null || stock === '') {
     showToast('Please fill all variant required fields.', 'error');
     card.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
 }
 
 variants.push({
-    id: card.dataset.variantId || null,   // 👈 ADD THIS
+    id: card.dataset.variantId || null,   
     color,
-    size,
+    sizes,
     price,
     sales_price: parseFloat(card.querySelector('.v-sales-price').value) || null,
     stock,
@@ -813,7 +820,12 @@ async function openEditModal(id) {
     card.dataset.variantId = v.id;  
 
     card.querySelector('.v-color').value = v.color || '';
-    card.querySelector('.v-size').value = v.size || '';
+    const sizeSelect = card.querySelector('.v-size');
+
+if (v.sizes && v.sizes.length > 0) {
+    const tom = sizeSelect.tomselect;
+    tom.setValue(v.sizes);
+}
     card.querySelector('.v-price').value = v.price || '';
     card.querySelector('.v-sales-price').value = v.sales_price || '';
     card.querySelector('.v-stock').value = v.stock || 0;

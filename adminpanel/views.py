@@ -21,6 +21,8 @@ from django.core.paginator import Paginator
 from django.contrib.admin.views.decorators import staff_member_required
 from decimal import Decimal, InvalidOperation
 from products.models import Review  
+from django.utils.dateparse import parse_datetime
+from django.utils import timezone as tz
 
 
 
@@ -57,28 +59,116 @@ def admin_login(request):
             return redirect('admin_dashboard')
 
     return render(request, 'adminpanel/admin-login.html')
-
 @never_cache
 @login_required
 @user_passes_test(is_admin, login_url='admin_login')
 def admin_dashboard(request):
-    total_users = User.objects.count()
-    active_users = User.objects.filter(is_active=True).count()
-    blocked_users = User.objects.filter(is_active=False).count()
+    from orders.models import Order, OrderItem
+    from products.models import Product
+    from django.db.models import Sum, Count
+    from django.db.models.functions import TruncMonth, TruncDate
+    from datetime import timedelta
 
-    today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    today_signups = User.objects.filter(
-        date_joined__gte=today_start
+    # ── User stats ──
+    total_users   = User.objects.count()
+    active_users  = User.objects.filter(is_active=True).count()
+    blocked_users = User.objects.filter(is_active=False).count()
+    today_start   = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_signups = User.objects.filter(date_joined__gte=today_start).count()
+
+    # ── Order / revenue stats ──
+    all_orders     = Order.objects.all()
+    total_orders   = all_orders.count()
+    total_revenue  = all_orders.filter(
+        payment_status='paid'
+    ).aggregate(t=Sum('total'))['t'] or 0
+
+    # vs last month
+    now            = timezone.now()
+    this_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    last_month_end   = this_month_start - timedelta(seconds=1)
+    last_month_start = last_month_end.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    this_month_revenue = Order.objects.filter(
+        payment_status='paid', created_at__gte=this_month_start
+    ).aggregate(t=Sum('total'))['t'] or 0
+
+    last_month_revenue = Order.objects.filter(
+        payment_status='paid',
+        created_at__gte=last_month_start,
+        created_at__lte=last_month_end,
+    ).aggregate(t=Sum('total'))['t'] or 0
+
+    this_month_orders = Order.objects.filter(created_at__gte=this_month_start).count()
+    last_month_orders = Order.objects.filter(
+        created_at__gte=last_month_start,
+        created_at__lte=last_month_end,
     ).count()
 
-    context = {
-        'total_users': total_users,
-        'active_users': active_users,
-        'blocked_users': blocked_users,
-        'today_signups': today_signups,
-        'username': request.user.get_full_name() or request.user.username,  # for "Welcome back"
-    }
+    def pct_change(current, previous):
+        if previous == 0:
+            return 100 if current > 0 else 0
+        return round(((current - previous) / previous) * 100, 1)
 
+    revenue_change = pct_change(float(this_month_revenue), float(last_month_revenue))
+    orders_change  = pct_change(this_month_orders, last_month_orders)
+
+    # ── Revenue chart — last 7 months ──
+    seven_months_ago = now - timedelta(days=210)
+    monthly_revenue  = (
+        Order.objects.filter(
+            payment_status='paid',
+            created_at__gte=seven_months_ago,
+        )
+        .annotate(month=TruncMonth('created_at'))
+        .values('month')
+        .annotate(total=Sum('total'))
+        .order_by('month')
+    )
+    chart_labels  = [r['month'].strftime('%b') for r in monthly_revenue]
+    chart_data    = [float(r['total']) for r in monthly_revenue]
+
+    # ── Sales by category ──
+    from orders.models import OrderItem
+    category_sales = (
+        OrderItem.objects
+        .values('variant__product__category__name')
+        .annotate(total=Sum('unit_price'))
+        .order_by('-total')[:5]
+    )
+    cat_labels = [r['variant__product__category__name'] or 'Unknown' for r in category_sales]
+    cat_data   = [float(r['total']) for r in category_sales]
+
+    # ── Recent orders ──
+    recent_orders = (
+        Order.objects
+        .select_related('user')
+        .prefetch_related('items')
+        .order_by('-created_at')[:5]
+    )
+
+    # ── Product stats ──
+    total_products = Product.objects.filter(is_deleted=False).count()
+
+    context = {
+        'total_users':       total_users,
+        'active_users':      active_users,
+        'blocked_users':     blocked_users,
+        'today_signups':     today_signups,
+        'username':          request.user.get_full_name() or request.user.username,
+        'total_orders':      total_orders,
+        'total_revenue':     total_revenue,
+        'revenue_change':    revenue_change,
+        'orders_change':     orders_change,
+        'this_month_revenue': this_month_revenue,
+        'this_month_orders': this_month_orders,
+        'total_products':    total_products,
+        'chart_labels':      chart_labels,
+        'chart_data':        chart_data,
+        'cat_labels':        cat_labels,
+        'cat_data':          cat_data,
+        'recent_orders':     recent_orders,
+    }
     return render(request, 'adminpanel/dashboard.html', context)
 
 @never_cache
@@ -366,15 +456,13 @@ def product_list(request):
         'occasions': Occasion.objects.all(),
     }
     return render(request, 'adminpanel/product_list.html', context)
-
 @never_cache
 @login_required
 @user_passes_test(is_admin, login_url='admin_login')
 @require_POST
 def product_add(request):
 
-    data = request.POST
-    product_form = ProductForm(data)
+    product_form = ProductForm(request.POST)
 
     if not product_form.is_valid():
         return JsonResponse({
@@ -383,7 +471,8 @@ def product_add(request):
         }, status=400)
 
     product = product_form.save()
-    variants_json = data.get('variants')
+
+    variants_json = request.POST.get('variants')
 
     if not variants_json:
         return JsonResponse({
@@ -399,59 +488,58 @@ def product_add(request):
             'message': 'Invalid variants JSON'
         }, status=400)
 
-   
     for index, variant_data in enumerate(variants_data, start=1):
 
-        image_count = int(variant_data.get('image_count', 0))
+        sizes = variant_data.get('sizes', [])
 
-        if image_count < 3:
-            return JsonResponse({
-                'success': False,
-                'message': 'Each variant must have at least 3 images.'
-            }, status=400)
-
-      
-        variant = ProductVariant.objects.create(
-            product=product,
-            color=variant_data.get('color'),
-            size=variant_data.get('size'),
-            price=variant_data.get('price'),
-            sales_price=variant_data.get('sales_price') or None,
-            stock=variant_data.get('stock'),
-        )
-
-        
         image_key = f'variant_images_{index}'
         images = request.FILES.getlist(image_key)
 
-        if image_count < 3:
+        if len(images) < 3:
             return JsonResponse({
                 'success': False,
-                'message': 'Each variant must have at least 3 images uploaded.'
+                'message': 'Please upload at least 3 images.'
             }, status=400)
 
-        for img in images:
-            VariantImage.objects.create(
-                variant=variant,
-                image=img
+        first_variant = None
+
+        for size in sizes:
+
+            variant = ProductVariant.objects.create(
+                product=product,
+                color=variant_data.get('color'),
+                size=size,
+                price=float(variant_data.get('price') or 0),
+                sales_price=float(variant_data.get('sales_price')) if variant_data.get('sales_price') else None,
+                stock=int(variant_data.get('stock') or 0),
             )
+
+            if not first_variant:
+                first_variant = variant
+
+        # save images only once
+        if first_variant:
+            for img in images:
+                VariantImage.objects.create(
+                    variant=first_variant,
+                    image=img
+                )
 
     return JsonResponse({
         'success': True,
         'product_id': product.id,
         'message': 'Product added successfully!'
     })
-
-
 @never_cache
 @login_required
 @user_passes_test(is_admin, login_url='admin_login')
 def product_edit(request, pk):
+
     product = get_object_or_404(Product, pk=pk, is_deleted=False)
 
     if request.method == 'POST':
 
-        product_form = ProductForm(request.POST, request.FILES, instance=product)
+        product_form = ProductForm(request.POST, instance=product)
 
         if not product_form.is_valid():
             return JsonResponse({
@@ -472,74 +560,87 @@ def product_edit(request, pk):
                     'message': 'Invalid variant data'
                 }, status=400)
 
-            for variant_data in variants_data:
-                variant_id = variant_data.get('id')
+         
+            old_images_by_color = {}
+            for v in product.variants.all():
+                imgs = list(v.images.all())
+                if imgs:
+                    old_images_by_color[v.color] = imgs
 
-                if not variant_id:
-                    continue
+            product.variants.all().delete()
 
-                try:
-                    variant = ProductVariant.objects.get(
-                        id=variant_id,
-                        product=product
-                    )
-                except ProductVariant.DoesNotExist:
-                    continue
+           
 
-                variant.color = variant_data.get('color')
-                variant.size = variant_data.get('size')
+            for index, variant_data in enumerate(variants_data, start=1):
 
-                # Convert properly
-                variant.price = float(variant_data.get('price') or 0)
-                variant.sales_price = (
-                    float(variant_data.get('sales_price'))
-                    if variant_data.get('sales_price')
-                    else None
-                )
-                variant.stock = int(variant_data.get('stock') or 0)
+                sizes = variant_data.get('sizes', [])
 
-                variant.save()
-
-        
-                index = variants_data.index(variant_data) + 1
                 image_key = f'variant_images_{index}'
                 images = request.FILES.getlist(image_key)
 
-                if images:
-                  
-                    variant.images.all().delete()
+                first_variant = None
 
-                    for img in images:
-                        VariantImage.objects.create(
-                            variant=variant,
-                            image=img
-                        )
+                for size in sizes:
+
+                    variant = ProductVariant.objects.create(
+                        product=product,
+                        color=variant_data.get('color'),
+                        size=size,
+                        price=float(variant_data.get('price') or 0),
+                        sales_price=float(variant_data.get('sales_price')) if variant_data.get('sales_price') else None,
+                        stock=int(variant_data.get('stock') or 0),
+                    )
+
+                    if not first_variant:
+                        first_variant = variant
+
+                # save images
+                if first_variant:
+                    if images:
+                        for img in images:
+                            VariantImage.objects.create(
+                                variant=first_variant,
+                                image=img
+                            )
+                    else:
+                        # Restore old images from saved map
+                        color = variant_data.get('color')
+                        old_imgs = old_images_by_color.get(color, [])
+                        for old in old_imgs:
+                            VariantImage.objects.create(
+                                variant=first_variant,
+                                image=old.image
+                            )
 
         return JsonResponse({
             'success': True,
             'message': 'Product updated successfully!'
         })
 
-    # ---- GET PART ----
-    variants = []
-    for v in product.variants.filter(is_deleted=False):
+    # ---------- GET PART (FOR EDIT FORM) ----------
 
-        images = []
+    grouped = {}
+
+    for v in product.variants.all():
+
+        if v.color not in grouped:
+            grouped[v.color] = {
+                'id': v.id,
+                'color': v.color,
+                'sizes': [],
+                'price': str(v.price),
+                'sales_price': str(v.sales_price) if v.sales_price else '',
+                'stock': v.stock,
+                'images': []
+            }
+
+        grouped[v.color]['sizes'].append(v.size)
+
         for img in v.images.all():
-            images.append({
+            grouped[v.color]['images'].append({
                 'id': img.id,
-                'url': img.image.url,
+                'url': img.image.url
             })
-
-        variants.append({
-            'id': v.id,
-            'color': v.color,
-            'size': v.size,
-            'price': str(v.price),
-            'sales_price': str(v.sales_price) if v.sales_price else '',
-            'stock': v.stock,
-            'images': images,
-        })
 
     return JsonResponse({
         'id': product.id,
@@ -550,7 +651,7 @@ def product_edit(request, pk):
         'occasions': list(product.occasions.values_list('id', flat=True)),
         'is_active': product.is_active,
         'is_featured': product.is_featured,
-        'variants': variants,
+        'variants': list(grouped.values())
     })
 @never_cache
 @login_required
@@ -880,10 +981,9 @@ def admin_inventory(request):
     
 
     variants = ProductVariant.objects.filter(
-        is_deleted=False,
-        product__is_deleted=False,
-        product__is_active=True,
-    ).select_related('product', 'product__category', 'product__brand').order_by('stock')
+    is_deleted=False,
+    product__is_deleted=False,
+).select_related('product', 'product__category', 'product__brand').order_by('stock')
 
     q = request.GET.get('q', '').strip()
 
@@ -908,11 +1008,11 @@ def admin_inventory(request):
     page_obj = paginator.get_page(request.GET.get('page', 1))
 
     stats = {
-        'total':    ProductVariant.objects.filter(is_deleted=False).count(),
-        'out':      ProductVariant.objects.filter(is_deleted=False, stock=0).count(),
-        'low':      ProductVariant.objects.filter(is_deleted=False, stock__gt=0, stock__lte=10).count(),
-        'healthy':  ProductVariant.objects.filter(is_deleted=False, stock__gt=10).count(),
-    }
+    'total':   ProductVariant.objects.filter(is_deleted=False, product__is_deleted=False).count(),
+    'out':     ProductVariant.objects.filter(is_deleted=False, product__is_deleted=False, stock=0).count(),
+    'low':     ProductVariant.objects.filter(is_deleted=False, product__is_deleted=False, stock__gt=0, stock__lte=10).count(),
+    'healthy': ProductVariant.objects.filter(is_deleted=False, product__is_deleted=False, stock__gt=10).count(),
+}
 
     return render(request, 'adminpanel/inventory.html', {
         'page_obj': page_obj,
@@ -1008,8 +1108,16 @@ def _save_coupon(coupon, data):
     coupon.discount_value = Decimal(data['discount_value'])
     coupon.min_order      = Decimal(data.get('min_order') or '0')
     coupon.max_discount   = Decimal(data['max_discount']) if data.get('max_discount', '').strip() else None
-    coupon.valid_from     = data['valid_from']
-    coupon.valid_to       = data['valid_to']
+    vf = parse_datetime(data['valid_from'])
+    vt = parse_datetime(data['valid_to'])
+
+    if vf and tz.is_naive(vf):
+        vf = tz.make_aware(vf)
+    if vt and tz.is_naive(vt):
+        vt = tz.make_aware(vt)
+
+    coupon.valid_from = vf
+    coupon.valid_to   = vt
     coupon.usage_limit    = int(data['usage_limit']) if data.get('usage_limit', '').strip() else None
     coupon.per_user_limit = int(data.get('per_user_limit') or 1)
     coupon.is_active      = data.get('is_active')  == 'on'
@@ -1129,24 +1237,6 @@ def review_list(request):
     })
 
 
-@staff_member_required
-@require_POST
-def review_approve(request, review_id):
-    review = get_object_or_404(Review, id=review_id)
-    review.is_approved = True
-    review.is_rejected = False
-    review.save()
-    return JsonResponse({'success': True, 'message': 'Review approved.'})
-
-
-@staff_member_required
-@require_POST
-def review_reject(request, review_id):
-    review = get_object_or_404(Review, id=review_id)
-    review.is_approved = False
-    review.is_rejected = True
-    review.save()
-    return JsonResponse({'success': True, 'message': 'Review rejected.'})
 
 
 @staff_member_required
@@ -1164,3 +1254,579 @@ def review_delete(request, review_id):
 def admin_logout(request):
     logout(request)
     return redirect('admin_login')
+
+
+
+
+
+
+
+
+
+
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  ADD THESE SECTIONS TO YOUR EXISTING adminpanel/views.py
+#  (paste after your existing imports and before admin_logout)
+# ═══════════════════════════════════════════════════════════════════
+
+# Add these imports at the top of adminpanel/views.py:
+#
+# from products.models import ProductOffer
+# from orders.models import Wallet, WalletTransaction, CouponUsage
+# import openpyxl
+# from openpyxl.styles import Font, PatternFill, Alignment
+# from io import BytesIO
+# from datetime import datetime, date
+# from django.db.models.functions import TruncDate, TruncWeek, TruncMonth
+
+
+# ─────────────────────────────────────────────────────────────────
+#  OFFER MODULE
+# ─────────────────────────────────────────────────────────────────
+
+from products.models import ProductOffer
+from orders.models import Wallet, WalletTransaction, CouponUsage
+
+
+@never_cache
+@login_required
+@user_passes_test(is_admin, login_url='admin_login')
+def admin_offer_list(request):
+    """List all product and category offers."""
+    product_offers = ProductOffer.objects.select_related('product').order_by('-created_at')
+    categories     = Category.objects.filter(is_deleted=False, is_active=True).order_by('name')
+    products       = Product.objects.filter(is_active=True).order_by('name')
+
+    q = request.GET.get('q', '').strip()
+    if q:
+        product_offers = product_offers.filter(product__name__icontains=q)
+
+    now = timezone.now()
+
+    total_offers   = product_offers.count()
+    active_offers  = product_offers.filter(is_active=True).count()
+    expired_offers = product_offers.filter(valid_to__lt=now).count()
+    cats_with_offer = categories.filter(offer_percentage__gt=0).count()
+
+    paginator = Paginator(product_offers, 15)
+    page_obj  = paginator.get_page(request.GET.get('page', 1))
+
+    return render(request, 'adminpanel/offer-list.html', {
+        'page_obj':        page_obj,
+        'categories':      categories,
+        'products':        products,
+        'q':               q,
+        'total_offers':    total_offers,
+        'active_offers':   active_offers,
+        'expired_offers':  expired_offers,
+        'cats_with_offer': cats_with_offer,
+    })
+
+
+@never_cache
+@login_required
+@user_passes_test(is_admin, login_url='admin_login')
+@require_POST
+def admin_offer_create(request):
+    """Create a product-level offer."""
+    product_id          = request.POST.get('product_id')
+    discount_percentage = request.POST.get('discount_percentage', '').strip()
+    valid_from          = request.POST.get('valid_from', '').strip() or None
+    valid_to            = request.POST.get('valid_to', '').strip()   or None
+    is_active           = request.POST.get('is_active') == 'on'
+
+    errors = []
+    if not product_id:
+        errors.append('Please select a product.')
+    if not discount_percentage:
+        errors.append('Discount percentage is required.')
+    else:
+        try:
+            pct = int(discount_percentage)
+            if not (1 <= pct <= 99):
+                errors.append('Discount must be between 1 and 99.')
+        except ValueError:
+            errors.append('Discount must be a whole number.')
+
+    if errors:
+        return JsonResponse({'success': False, 'errors': errors})
+
+    product = get_object_or_404(Product, pk=product_id)
+
+    # Upsert — one offer per product (OneToOne)
+    offer, created = ProductOffer.objects.update_or_create(
+        product=product,
+        defaults={
+            'discount_percentage': int(discount_percentage),
+            'valid_from':          valid_from,
+            'valid_to':            valid_to,
+            'is_active':           is_active,
+        }
+    )
+    verb = 'created' if created else 'updated'
+    return JsonResponse({'success': True, 'message': f'Offer {verb} for "{product.name}".'})
+
+
+@never_cache
+@login_required
+@user_passes_test(is_admin, login_url='admin_login')
+@require_POST
+def admin_offer_toggle(request, pk):
+    offer            = get_object_or_404(ProductOffer, pk=pk)
+    offer.is_active  = not offer.is_active
+    offer.save(update_fields=['is_active', 'updated_at'])
+    return JsonResponse({'success': True, 'is_active': offer.is_active})
+
+
+@never_cache
+@login_required
+@user_passes_test(is_admin, login_url='admin_login')
+@require_POST
+def admin_offer_delete(request, pk):
+    get_object_or_404(ProductOffer, pk=pk).delete()
+    return JsonResponse({'success': True})
+
+
+@never_cache
+@login_required
+@user_passes_test(is_admin, login_url='admin_login')
+@require_POST
+def admin_category_offer_update(request, category_id):
+    """Set/update offer percentage directly on a category."""
+    category = get_object_or_404(Category, pk=category_id)
+    pct_raw  = request.POST.get('offer_percentage', '').strip()
+
+    try:
+        pct = int(pct_raw)
+        if not (0 <= pct <= 99):
+            return JsonResponse({'success': False, 'errors': ['Must be 0–99.']})
+    except ValueError:
+        return JsonResponse({'success': False, 'errors': ['Enter a whole number.']})
+
+    category.offer_percentage = pct
+    category.save(update_fields=['offer_percentage'])
+    return JsonResponse({
+        'success': True,
+        'message': f'Category "{category.name}" offer set to {pct}%.',
+        'offer_percentage': pct,
+    })
+
+
+# ─────────────────────────────────────────────────────────────────
+#  RETURN MANAGEMENT — approve/reject with wallet refund
+# ─────────────────────────────────────────────────────────────────
+
+from orders.models import Order as _Order, Wallet, WalletTransaction
+
+
+@never_cache
+@login_required
+@user_passes_test(is_admin, login_url='admin_login')
+@require_POST
+def admin_approve_return(request, order_id):
+    """
+    Admin approves a return:
+    - Items status → 'returned'
+    - Stock restored
+    - Wallet refund if order was prepaid
+    """
+    from orders.models import Wallet as _Wallet
+    order = get_object_or_404(_Order, order_id=order_id)
+
+    if order.status != 'return_requested':
+        return JsonResponse({'error': 'Order is not in return_requested state.'}, status=400)
+
+    for item in order.items.filter(status='return_requested'):
+        if item.variant:
+            item.variant.stock += item.quantity
+            item.variant.save(update_fields=['stock'])
+        item.status = 'returned'
+        item.save()
+
+    order.status = 'returned'
+    order.save(update_fields=['status', 'updated_at'])
+
+    # Wallet refund for prepaid orders
+    refund_amount = order.refund_amount()
+    if refund_amount > 0:
+        wallet, _ = _Wallet.objects.get_or_create(user=order.user)
+        wallet.credit(
+            refund_amount,
+            description=f"Refund for returned order {order.order_id}",
+            order=order,
+        )
+        return JsonResponse({
+            'success':      True,
+            'message':      f'Return approved. ₹{refund_amount:.0f} refunded to customer wallet.',
+            'new_status':   'returned',
+            'refund_amount': refund_amount,
+        })
+
+    return JsonResponse({
+        'success':    True,
+        'message':    'Return approved. COD order — no wallet refund.',
+        'new_status': 'returned',
+    })
+
+
+@never_cache
+@login_required
+@user_passes_test(is_admin, login_url='admin_login')
+@require_POST
+def admin_reject_return(request, order_id):
+    """Admin rejects a return — order goes back to delivered."""
+    order = get_object_or_404(_Order, order_id=order_id)
+
+    if order.status != 'return_requested':
+        return JsonResponse({'error': 'Order is not in return_requested state.'}, status=400)
+
+    for item in order.items.filter(status='return_requested'):
+        item.status = 'active'
+        item.return_reason = ''
+        item.save()
+
+    order.status = 'delivered'
+    order.save(update_fields=['status', 'updated_at'])
+
+    return JsonResponse({
+        'success':    True,
+        'message':    'Return request rejected. Order restored to delivered.',
+        'new_status': 'delivered',
+    })
+
+
+# ─────────────────────────────────────────────────────────────────
+#  SALES REPORT
+# ─────────────────────────────────────────────────────────────────
+
+from datetime import datetime as _datetime, timedelta as _timedelta
+from django.db.models import Sum, Count
+from django.db.models.functions import TruncDate, TruncMonth
+from orders.models import Order as _Order2
+
+
+@never_cache
+@login_required
+@user_passes_test(is_admin, login_url='admin_login')
+def admin_sales_report(request):
+    """
+    Sales report with filters: daily / weekly / monthly / custom.
+    Supports PDF and Excel download via ?export=pdf|excel.
+    """
+    # ── date range ──
+    period     = request.GET.get('period', 'monthly')
+    date_from  = request.GET.get('date_from', '')
+    date_to    = request.GET.get('date_to', '')
+    export     = request.GET.get('export', '')
+
+    today = timezone.now().date()
+
+    if period == 'daily':
+        start = today
+        end   = today
+    elif period == 'weekly':
+        start = today - _timedelta(days=6)
+        end   = today
+    elif period == 'monthly':
+        start = today.replace(day=1)
+        end   = today
+    elif period == 'yearly':
+        start = today.replace(month=1, day=1)
+        end   = today
+    elif period == 'custom' and date_from and date_to:
+        try:
+            start = _datetime.strptime(date_from, '%Y-%m-%d').date()
+            end   = _datetime.strptime(date_to,   '%Y-%m-%d').date()
+        except ValueError:
+            start, end = today.replace(day=1), today
+    else:
+        start = today.replace(day=1)
+        end   = today
+
+    # ── base queryset ──
+    orders = _Order2.objects.filter(
+        created_at__date__gte=start,
+        created_at__date__lte=end,
+    ).exclude(status='cancelled')
+
+    # ── summary stats ──
+    summary = orders.aggregate(
+        total_orders   = Count('id'),
+        gross_revenue  = Sum('subtotal'),
+        total_discount = Sum('discount'),
+        total_shipping = Sum('shipping'),
+        net_revenue    = Sum('total'),
+    )
+    for key in summary:
+        if summary[key] is None:
+            summary[key] = 0
+
+    # ── daily breakdown ──
+    daily_data = (
+        orders
+        .annotate(day=TruncDate('created_at'))
+        .values('day')
+        .annotate(
+            orders_count=Count('id'),
+            gross       =Sum('subtotal'),
+            discount    =Sum('discount'),
+            net         =Sum('total'),
+        )
+        .order_by('day')
+    )
+
+    # ── top products ──
+    from orders.models import OrderItem as _OI
+    top_products = (
+        _OI.objects.filter(
+            order__created_at__date__gte=start,
+            order__created_at__date__lte=end,
+        )
+        .exclude(order__status='cancelled')
+        .values('product_name')
+        .annotate(units=Sum('quantity'), revenue=Sum('unit_price'))
+        .order_by('-units')[:10]
+    )
+
+    # ── payment method breakdown ──
+    payment_breakdown = (
+        orders.values('payment_method')
+        .annotate(count=Count('id'), total=Sum('total'))
+        .order_by('-total')
+    )
+
+    context = {
+        'period':            period,
+        'start':             start,
+        'end':               end,
+        'date_from':         date_from,
+        'date_to':           date_to,
+        'summary':           summary,
+        'daily_data':        list(daily_data),
+        'top_products':      list(top_products),
+        'payment_breakdown': list(payment_breakdown),
+    }
+
+    # ── exports ──
+    if export == 'pdf':
+        return _export_sales_pdf(context)
+    if export == 'excel':
+        return _export_sales_excel(context)
+
+    return render(request, 'adminpanel/sales-report.html', context)
+
+
+def _export_sales_pdf(ctx):
+    """Generate and return PDF sales report."""
+    try:
+        from io import BytesIO
+        from reportlab.lib              import colors
+        from reportlab.lib.pagesizes    import A4, landscape
+        from reportlab.lib.styles       import ParagraphStyle
+        from reportlab.lib.units        import mm
+        from reportlab.platypus         import (
+            HRFlowable, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+        )
+
+        buffer  = BytesIO()
+        doc     = SimpleDocTemplate(
+            buffer, pagesize=landscape(A4),
+            rightMargin=15*mm, leftMargin=15*mm,
+            topMargin=15*mm,   bottomMargin=15*mm
+        )
+        h1  = ParagraphStyle('H1',  fontSize=20, fontName='Helvetica-Bold',
+                              textColor=colors.HexColor('#2a2520'), spaceAfter=4)
+        h2  = ParagraphStyle('H2',  fontSize=12, fontName='Helvetica-Bold',
+                              textColor=colors.HexColor('#2a2520'), spaceBefore=10, spaceAfter=4)
+        sub = ParagraphStyle('Sub', fontSize=9,  fontName='Helvetica',
+                              textColor=colors.HexColor('#888888'), spaceAfter=8)
+
+        s   = ctx['summary']
+        story = []
+        story.append(Paragraph('ALAIA — Sales Report', h1))
+        story.append(Paragraph(
+            f"Period: {ctx['start'].strftime('%d %b %Y')} → {ctx['end'].strftime('%d %b %Y')}",
+            sub
+        ))
+        story.append(HRFlowable(width='100%', thickness=1,
+                                 color=colors.HexColor('#c9a96e'), spaceAfter=8))
+
+        # Summary table
+        story.append(Paragraph('Summary', h2))
+        sum_data = [
+            ['Total Orders', 'Gross Revenue', 'Total Discount', 'Shipping', 'Net Revenue'],
+            [
+                str(s['total_orders']),
+                f"₹{s['gross_revenue']:,.0f}",
+                f"₹{s['total_discount']:,.0f}",
+                f"₹{s['total_shipping']:,.0f}",
+                f"₹{s['net_revenue']:,.0f}",
+            ]
+        ]
+        sum_tbl = Table(sum_data, colWidths=[40*mm]*5)
+        sum_tbl.setStyle(TableStyle([
+            ('BACKGROUND',   (0,0), (-1,0), colors.HexColor('#2a2520')),
+            ('TEXTCOLOR',    (0,0), (-1,0), colors.white),
+            ('FONTNAME',     (0,0), (-1,-1),'Helvetica-Bold'),
+            ('FONTSIZE',     (0,0), (-1,-1), 9),
+            ('ALIGN',        (0,0), (-1,-1),'CENTER'),
+            ('GRID',         (0,0), (-1,-1), 0.5, colors.HexColor('#dddddd')),
+            ('BOTTOMPADDING',(0,0), (-1,-1), 6),
+            ('TOPPADDING',   (0,0), (-1,-1), 6),
+        ]))
+        story.append(sum_tbl)
+        story.append(Spacer(1, 6*mm))
+
+        # Daily breakdown
+        if ctx['daily_data']:
+            story.append(Paragraph('Daily Breakdown', h2))
+            rows = [['Date', 'Orders', 'Gross (₹)', 'Discount (₹)', 'Net (₹)']]
+            for row in ctx['daily_data']:
+                rows.append([
+                    row['day'].strftime('%d %b %Y'),
+                    str(row['orders_count']),
+                    f"{row['gross'] or 0:,.0f}",
+                    f"{row['discount'] or 0:,.0f}",
+                    f"{row['net'] or 0:,.0f}",
+                ])
+            tbl = Table(rows, colWidths=[40*mm, 25*mm, 40*mm, 40*mm, 40*mm])
+            tbl.setStyle(TableStyle([
+                ('BACKGROUND',    (0,0), (-1,0), colors.HexColor('#555555')),
+                ('TEXTCOLOR',     (0,0), (-1,0), colors.white),
+                ('FONTNAME',      (0,0), (-1,0), 'Helvetica-Bold'),
+                ('FONTNAME',      (0,1), (-1,-1),'Helvetica'),
+                ('FONTSIZE',      (0,0), (-1,-1), 8),
+                ('ALIGN',         (1,0), (-1,-1),'RIGHT'),
+                ('ROWBACKGROUNDS',(0,1), (-1,-1),[colors.white, colors.HexColor('#f9f9f9')]),
+                ('GRID',          (0,0), (-1,-1), 0.3, colors.HexColor('#dddddd')),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+            ]))
+            story.append(tbl)
+
+        doc.build(story)
+        buffer.seek(0)
+        response = HttpResponse(buffer, content_type='application/pdf')
+        response['Content-Disposition'] = (
+            f'attachment; filename="ALAIA-Sales-Report-{ctx["start"]}-{ctx["end"]}.pdf"'
+        )
+        return response
+
+    except ImportError:
+        return HttpResponse("pip install reportlab", content_type='text/plain')
+
+
+def _export_sales_excel(ctx):
+    """Generate and return Excel sales report."""
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        from io import BytesIO
+
+        wb  = openpyxl.Workbook()
+        ws  = wb.active
+        ws.title = 'Sales Report'
+
+        GOLD  = 'C9A96E'
+        DARK  = '2A2520'
+        LIGHT = 'FDF9F4'
+
+        header_font  = Font(bold=True, color='FFFFFF', size=11)
+        header_fill  = PatternFill('solid', fgColor=DARK)
+        center       = Alignment(horizontal='center', vertical='center')
+        thin_border  = Border(
+            left=Side(style='thin', color='DDDDDD'),
+            right=Side(style='thin', color='DDDDDD'),
+            top=Side(style='thin', color='DDDDDD'),
+            bottom=Side(style='thin', color='DDDDDD'),
+        )
+
+        def hrow(ws, row, values, fill_color=DARK):
+            for col, val in enumerate(values, 1):
+                c = ws.cell(row=row, column=col, value=val)
+                c.font      = Font(bold=True, color='FFFFFF', size=10)
+                c.fill      = PatternFill('solid', fgColor=fill_color)
+                c.alignment = center
+                c.border    = thin_border
+
+        def drow(ws, row, values):
+            for col, val in enumerate(values, 1):
+                c = ws.cell(row=row, column=col, value=val)
+                c.alignment = Alignment(horizontal='right' if col > 1 else 'left')
+                c.border    = thin_border
+                if row % 2 == 0:
+                    c.fill = PatternFill('solid', fgColor='F5F0EA')
+
+        # Title
+        ws.merge_cells('A1:E1')
+        title = ws['A1']
+        title.value     = f"ALAIA Sales Report | {ctx['start']} → {ctx['end']}"
+        title.font      = Font(bold=True, size=14, color=DARK)
+        title.alignment = center
+        title.fill      = PatternFill('solid', fgColor='FDF9F4')
+        ws.row_dimensions[1].height = 30
+
+        # Summary
+        ws.append([])
+        hrow(ws, 3, ['Total Orders', 'Gross Revenue', 'Total Discount', 'Shipping', 'Net Revenue'])
+        s = ctx['summary']
+        drow(ws, 4, [
+            s['total_orders'],
+            f"₹{s['gross_revenue']:,.0f}",
+            f"₹{s['total_discount']:,.0f}",
+            f"₹{s['total_shipping']:,.0f}",
+            f"₹{s['net_revenue']:,.0f}",
+        ])
+
+        # Daily breakdown
+        ws.append([])
+        ws.append([])
+        r = ws.max_row
+        hrow(ws, r, ['Date', 'Orders', 'Gross (₹)', 'Discount (₹)', 'Net (₹)'])
+        for row in ctx['daily_data']:
+            r += 1
+            drow(ws, r, [
+                row['day'].strftime('%d %b %Y'),
+                row['orders_count'],
+                row['gross']    or 0,
+                row['discount'] or 0,
+                row['net']      or 0,
+            ])
+
+        # Top products
+        if ctx['top_products']:
+            ws.append([])
+            ws.append([])
+            r = ws.max_row
+            hrow(ws, r, ['Product', 'Units Sold', 'Revenue (₹)', '', ''])
+            for row in ctx['top_products']:
+                r += 1
+                drow(ws, r, [row['product_name'], row['units'], row['revenue'] or 0, '', ''])
+
+        # Column widths
+        for col in ws.columns:
+            max_len = 10
+            col_letter = None
+            for c in col:
+                if hasattr(c, 'column_letter'):
+                    col_letter = c.column_letter
+                    if c.value:
+                        max_len = max(max_len, len(str(c.value)))
+            if col_letter:
+                ws.column_dimensions[col_letter].width = min(max_len + 4, 40)
+
+        buffer = BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        response = HttpResponse(
+            buffer,
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = (
+            f'attachment; filename="ALAIA-Sales-{ctx["start"]}-{ctx["end"]}.xlsx"'
+        )
+        return response
+
+    except ImportError:
+        return HttpResponse("pip install openpyxl", content_type='text/plain')

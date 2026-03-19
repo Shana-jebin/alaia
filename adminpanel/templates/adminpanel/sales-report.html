@@ -1,0 +1,472 @@
+{% extends 'adminpanel/base_admin.html' %}
+{% load static %}
+
+{% block title %}Sales Report — ALAIA Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ═══════════════════════════════════════════
+   ALAIA SALES REPORT — matches dashboard.css
+═══════════════════════════════════════════ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #000000;
+  color: #ffffff;
+  font-family: 'Segoe UI', sans-serif;
+  min-height: 100vh;
+}
+
+.main-content {
+  background-color: #000000 !important;
+}
+.sr-wrap {
+  padding: 0 4px;
+  color: #ffffff;
+}
+
+/* ── Header ── */
+.sr-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.sr-title {
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: #ffffff;
+}
+.sr-sub {
+  font-size: 13px;
+  color: #666666;
+  margin-top: 4px;
+}
+.sr-export-btns {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.btn-export {
+  padding: 9px 18px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: opacity .2s;
+  letter-spacing: 0.3px;
+  border: 1px solid;
+}
+.btn-export:hover { opacity: .85; }
+.btn-export.excel {
+  background: rgba(26,122,60,.15);
+  color: #4ade80;
+  border-color: #4ade80;
+}
+.btn-export.pdf {
+  background: rgba(255,51,51,.1);
+  color: #ff3333;
+  border-color: #ff3333;
+}
+
+/* ── Filter bar ── */
+.sr-filter {
+  background-color: #0a0a0a;
+  border: 1px solid #1a1a1a;
+  border-radius: 6px;
+  padding: 20px 24px;
+  margin-bottom: 28px;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+.sr-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sr-filter label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #666666;
+}
+.sr-filter select,
+.sr-filter input[type=date] {
+  padding: 9px 12px;
+  border: 1px solid #1a1a1a;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #ffffff;
+  background: #000000;
+  outline: none;
+  transition: border-color .15s;
+}
+.sr-filter select:focus,
+.sr-filter input:focus { border-color: #333333; }
+.sr-filter select option { background: #0a0a0a; }
+#custom-range { display: none; }
+#custom-range.show { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
+
+.btn-apply {
+  padding: 9px 22px;
+  background: #ffffff;
+  color: #000000;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: opacity .15s;
+}
+.btn-apply:hover { opacity: .85; }
+
+/* ── Summary cards ── */
+.sr-cards {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+.sr-card {
+  background-color: #0a0a0a;
+  border: 1px solid #1a1a1a;
+  border-radius: 6px;
+  padding: 22px 20px;
+  transition: border-color .3s ease;
+}
+.sr-card:hover { border-color: #2a2a2a; }
+.sr-card-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #666666;
+  margin-bottom: 12px;
+}
+.sr-card-value {
+  font-size: 26px;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: -0.5px;
+}
+.sr-card-value.green { color: #4ade80; }
+.sr-card-value.red   { color: #ff3333; }
+.sr-card-value.gold  { color: #c9a96e; }
+
+/* ── Section wrapper ── */
+.sr-section {
+  background-color: #0a0a0a;
+  border: 1px solid #1a1a1a;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+.sr-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 24px;
+  border-bottom: 1px solid #1a1a1a;
+}
+.sr-section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: 0.3px;
+}
+.sr-section-meta {
+  font-size: 12px;
+  color: #666666;
+}
+
+/* ── Tables ── */
+.sr-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.sr-table thead tr {
+  background-color: #0a0a0a;
+  border-bottom: 1px solid #1a1a1a;
+}
+.sr-table th {
+  padding: 14px 24px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #666666;
+  white-space: nowrap;
+}
+.sr-table td {
+  padding: 14px 24px;
+  border-bottom: 1px solid #1a1a1a;
+  color: #ffffff;
+  font-size: 13px;
+}
+.sr-table tbody tr:last-child td { border-bottom: none; }
+.sr-table tbody tr:hover { background-color: #0f0f0f; }
+.sr-table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+.sr-table th.num { text-align: right; }
+
+/* rank number */
+.sr-rank {
+  font-size: 12px;
+  color: #444444;
+  font-weight: 500;
+}
+
+/* amount colors */
+.amt-green { color: #4ade80; }
+.amt-red   { color: #ff3333; }
+.amt-gold  { color: #c9a96e; }
+
+/* payment method badge */
+.pay-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  border: 1px solid #2a2a2a;
+  background: #111111;
+  color: #999999;
+  text-transform: uppercase;
+}
+
+/* empty */
+.sr-empty {
+  text-align: center;
+  padding: 48px 24px;
+  color: #444444;
+  font-size: 13px;
+}
+
+/* date cell */
+.sr-date {
+  color: #999999;
+  font-size: 12px;
+}
+</style>
+{% endblock %}
+
+
+{% block content %}
+<div class="sr-wrap">
+
+  <!-- Header -->
+  <div class="sr-header">
+    <div>
+      <div class="sr-title">Sales Report</div>
+      <div class="sr-sub">
+        {% if period == 'custom' %}
+          {{ start|date:"d M Y" }} → {{ end|date:"d M Y" }}
+        {% else %}
+          {{ period|title }} &nbsp;·&nbsp; {{ start|date:"d M Y" }} → {{ end|date:"d M Y" }}
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="sr-export-btns">
+      <a href="?period={{ period }}&date_from={{ date_from }}&date_to={{ date_to }}&export=excel"
+         class="btn-export excel">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="12" y1="18" x2="12" y2="12"/>
+          <polyline points="9 15 12 18 15 15"/>
+        </svg>
+        Export Excel
+      </a>
+      <a href="?period={{ period }}&date_from={{ date_from }}&date_to={{ date_to }}&export=pdf"
+         class="btn-export pdf">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="8" y1="13" x2="16" y2="13"/>
+          <line x1="8" y1="17" x2="16" y2="17"/>
+        </svg>
+        Export PDF
+      </a>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <form method="get" id="filterForm">
+    <div class="sr-filter">
+      <div class="sr-filter-group">
+        <label>Period</label>
+        <select name="period" id="periodSelect" onchange="toggleCustom(this.value)">
+          <option value="daily"   {% if period == 'daily'   %}selected{% endif %}>Today</option>
+          <option value="weekly"  {% if period == 'weekly'  %}selected{% endif %}>Last 7 Days</option>
+          <option value="monthly" {% if period == 'monthly' %}selected{% endif %}>This Month</option>
+          <option value="yearly"  {% if period == 'yearly'  %}selected{% endif %}>This Year</option>
+          <option value="custom"  {% if period == 'custom'  %}selected{% endif %}>Custom Range</option>
+        </select>
+      </div>
+
+      <div id="custom-range" class="{% if period == 'custom' %}show{% endif %}">
+        <div class="sr-filter-group">
+          <label>From</label>
+          <input type="date" name="date_from" value="{{ date_from }}">
+        </div>
+        <div class="sr-filter-group">
+          <label>To</label>
+          <input type="date" name="date_to" value="{{ date_to }}">
+        </div>
+      </div>
+
+      <button type="submit" class="btn-apply">Apply</button>
+    </div>
+  </form>
+
+  <!-- Summary Cards -->
+  <div class="sr-cards">
+    <div class="sr-card">
+      <div class="sr-card-label">Total Orders</div>
+      <div class="sr-card-value">{{ summary.total_orders }}</div>
+    </div>
+    <div class="sr-card">
+      <div class="sr-card-label">Gross Revenue</div>
+      <div class="sr-card-value gold">₹{{ summary.gross_revenue|floatformat:0 }}</div>
+    </div>
+    <div class="sr-card">
+      <div class="sr-card-label">Discounts Given</div>
+      <div class="sr-card-value red">₹{{ summary.total_discount|floatformat:0 }}</div>
+    </div>
+    <div class="sr-card">
+      <div class="sr-card-label">Shipping</div>
+      <div class="sr-card-value">₹{{ summary.total_shipping|floatformat:0 }}</div>
+    </div>
+    <div class="sr-card">
+      <div class="sr-card-label">Net Revenue</div>
+      <div class="sr-card-value green">₹{{ summary.net_revenue|floatformat:0 }}</div>
+    </div>
+  </div>
+
+  <!-- Daily Breakdown -->
+  <div class="sr-section">
+    <div class="sr-section-head">
+      <span class="sr-section-title">Daily Breakdown</span>
+      <span class="sr-section-meta">{{ daily_data|length }} day{{ daily_data|length|pluralize }}</span>
+    </div>
+    {% if daily_data %}
+    <table class="sr-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th class="num">Orders</th>
+          <th class="num">Gross Revenue</th>
+          <th class="num">Discount</th>
+          <th class="num">Net Revenue</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in daily_data %}
+        <tr>
+          <td class="sr-date">{{ row.day|date:"d M Y" }}</td>
+          <td class="num">{{ row.orders_count }}</td>
+          <td class="num amt-gold">₹{{ row.gross|default:0|floatformat:0 }}</td>
+          <td class="num amt-red">₹{{ row.discount|default:0|floatformat:0 }}</td>
+          <td class="num amt-green">₹{{ row.net|default:0|floatformat:0 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="sr-empty">No orders found in this period.</div>
+    {% endif %}
+  </div>
+
+  <!-- Top Products -->
+  {% if top_products %}
+  <div class="sr-section">
+    <div class="sr-section-head">
+      <span class="sr-section-title">Top Products by Units Sold</span>
+      <span class="sr-section-meta">Top 10</span>
+    </div>
+    <table class="sr-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Product</th>
+          <th class="num">Units Sold</th>
+          <th class="num">Revenue</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in top_products %}
+        <tr>
+          <td class="sr-rank">{{ forloop.counter }}</td>
+          <td>{{ p.product_name }}</td>
+          <td class="num">{{ p.units }}</td>
+          <td class="num amt-gold">₹{{ p.revenue|default:0|floatformat:0 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <!-- Payment Methods -->
+  {% if payment_breakdown %}
+  <div class="sr-section">
+    <div class="sr-section-head">
+      <span class="sr-section-title">Payment Methods</span>
+      <span class="sr-section-meta">{{ payment_breakdown|length }} method{{ payment_breakdown|length|pluralize }}</span>
+    </div>
+    <table class="sr-table">
+      <thead>
+        <tr>
+          <th>Method</th>
+          <th class="num">Orders</th>
+          <th class="num">Revenue</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in payment_breakdown %}
+        <tr>
+          <td><span class="pay-badge">{{ row.payment_method|upper }}</span></td>
+          <td class="num">{{ row.count }}</td>
+          <td class="num amt-gold">₹{{ row.total|default:0|floatformat:0 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+function toggleCustom(val) {
+  document.getElementById('custom-range').classList.toggle('show', val === 'custom');
+}
+toggleCustom('{{ period }}');
+</script>
+{% endblock %}
