@@ -550,52 +550,64 @@ document.querySelectorAll('.pd-thumb').forEach(t => {
 });
 
 /* ── VARIANT FETCH (colour/size change) ─────────────────────────── */
-function fetchVariant(variantId){
+// Find fetchVariant function and replace entirely
+function fetchVariant(variantId) {
   fetch(`/products/api/variant/${variantId}/`)
     .then(r => r.json())
     .then(d => {
       const priceEl = document.getElementById('pdPrice');
       const origEl  = document.getElementById('pdPriceOrig');
       const discEl  = document.getElementById('pdDisc');
-      const skuEl   = document.getElementById('pdSku');
-      if(d.sales_price){
-        if(priceEl){ priceEl.textContent = '₹' + parseInt(d.sales_price).toLocaleString('en-IN'); priceEl.classList.add('sale-price'); }
-        if(origEl) { origEl.textContent = '₹' + parseInt(d.price).toLocaleString('en-IN'); origEl.style.display = ''; }
-        if(discEl) {
-          const pct = Math.round((d.price - d.sales_price) / d.price * 100);
-          discEl.textContent = pct + '% OFF'; discEl.style.display = '';
+
+      if (d.sales_price) {
+        if (priceEl) {
+          priceEl.textContent = '₹' + parseInt(d.sales_price).toLocaleString('en-IN');
+          priceEl.classList.add('sale-price');
+        }
+        if (origEl) {
+          origEl.textContent = '₹' + parseInt(d.price).toLocaleString('en-IN');
+          origEl.style.display = '';
+        }
+        if (discEl) {
+          discEl.textContent = d.discount_pct + '% OFF';  // ✅ from backend
+          discEl.style.display = '';
         }
       } else {
-        if(priceEl){ priceEl.textContent = '₹' + parseInt(d.price).toLocaleString('en-IN'); priceEl.classList.remove('sale-price'); }
-        if(origEl) origEl.style.display = 'none';
-        if(discEl) discEl.style.display = 'none';
+        if (priceEl) {
+          priceEl.textContent = '₹' + parseInt(d.price).toLocaleString('en-IN');
+          priceEl.classList.remove('sale-price');
+        }
+        if (origEl) origEl.style.display = 'none';
+        if (discEl) discEl.style.display = 'none';
       }
-      if(skuEl && d.sku) skuEl.textContent = d.sku;
-      // Update stock badge
-      const sb = document.getElementById('stockBadge');
-      if(sb){
+
+      // Stock badge
+      const sb  = document.getElementById('stockBadge');
+      const btn = document.getElementById('addToCartBtn');
+      if (sb && btn) {
         sb.className = 'pd-stock';
-        if(d.stock === 0){
+        if (d.stock === 0) {
           sb.classList.add('stock-out');
           sb.innerHTML = '<span class="sdot"></span>Out of Stock';
-          document.getElementById('addToCartBtn').disabled = true;
-          document.getElementById('addToCartBtn').textContent = 'Sold Out';
+          btn.disabled = true;
+          btn.textContent = 'Sold Out';
           const nb = document.getElementById('notifyBox');
-          if(nb) nb.classList.add('show');
-        } else if(d.stock <= 10){
+          if (nb) nb.classList.add('show');
+        } else if (d.stock <= 10) {
           sb.classList.add('stock-low');
           sb.innerHTML = `<span class="sdot"></span>Only ${d.stock} left — order soon`;
-          document.getElementById('addToCartBtn').disabled = false;
-          document.getElementById('addToCartBtn').textContent = 'Add to Collection';
+          btn.disabled = false;
+          btn.textContent = 'Add to Collection';
         } else {
           sb.classList.add('stock-in');
           sb.innerHTML = '<span class="sdot"></span>In Stock';
-          document.getElementById('addToCartBtn').disabled = false;
-          document.getElementById('addToCartBtn').textContent = 'Add to Collection';
+          btn.disabled = false;
+          btn.textContent = 'Add to Collection';
         }
       }
-      // Update main image if variant has images
-      if(d.images && d.images.length && mainImg){
+
+      // Update image
+      if (d.images && d.images.length && mainImg) {
         mainImg.src = d.images[0].url;
       }
     })
@@ -770,6 +782,21 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 {% endif %}
+
+document.addEventListener('DOMContentLoaded', function () {
+  const firstAvailableSize = document.querySelector(
+    '.pd-size-wrap:not(.unavailable) input[type="radio"]'
+  );
+  if (firstAvailableSize) {
+    firstAvailableSize.checked = true;
+    const variantId = firstAvailableSize
+      .closest('.pd-size-wrap')
+      .dataset.variantId;
+    const sizeLabel = document.getElementById('selectedSizeLabel');
+    if (sizeLabel) sizeLabel.textContent = firstAvailableSize.value;
+    fetchVariant(variantId);  
+  }
+});
 
 })();
 </script>

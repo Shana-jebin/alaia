@@ -125,15 +125,31 @@
         <div class="pay-grid">
 
           <!-- COD -->
-          <label class="pay-option selected" id="pay-cod">
-            <input type="radio" name="payment_method" value="cod" checked
-                   onchange="selectPay('cod')">
-            <div class="pay-dot"></div>
-            <div class="pay-info">
-              <div class="pay-label">Cash on Delivery</div>
-              <div class="pay-sub">Pay when your order arrives</div>
-            </div>
-          </label>
+          <label class="pay-option {% if total <= 2500 %}selected{% endif %}" id="pay-cod">
+  <input type="radio" name="payment_method" value="cod"
+         {% if total > 2500 %}disabled{% endif %}
+         {% if total <= 2500 %}checked{% endif %}
+         onchange="selectPay('cod')">
+
+  <div class="pay-dot"></div>
+
+  <div class="pay-info">
+    <div class="pay-label">
+      Cash on Delivery
+      {% if total > 2500 %}
+        <span style="color:red; font-size:12px;">(Not available)</span>
+      {% endif %}
+    </div>
+
+    <div class="pay-sub">
+      {% if total > 2500 %}
+        Only available for orders below ₹2500
+      {% else %}
+        Pay when your order arrives
+      {% endif %}
+    </div>
+  </div>
+</label>
 
           <!-- Online / Razorpay -->
           <label class="pay-option" id="pay-online">
@@ -173,6 +189,11 @@
               </div>
             </div>
           </label>
+          {% if total > 2500 %}
+<p style="color:red; font-size:12px; margin-top:5px;">
+  COD available only for orders below ₹2500
+</p>
+{% endif %}
 
         </div>
 

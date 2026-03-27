@@ -955,20 +955,30 @@ def admin_order_status(request, order_id):
             item.save()
 
 
+    refund_msg = ''
     if new_status == 'returned' and order.status == 'return_requested':
+        refund_amount = order.refund_amount()
         for item in order.items.filter(status='return_requested'):
             if item.variant:
                 item.variant.stock += item.quantity
                 item.variant.save(update_fields=['stock'])
             item.status = 'returned'
             item.save()
+        if refund_amount > 0:
+            wallet, _ = Wallet.objects.get_or_create(user=order.user)
+            wallet.credit(
+                refund_amount,
+                description=f"Refund for returned order {order.order_id}",
+                order=order,
+            )
+            refund_msg = f' ₹{refund_amount:.0f} refunded to customer wallet.'
 
     order.status = new_status
     order.save(update_fields=['status', 'updated_at'])
 
     return JsonResponse({
         'success': True,
-        'message': f'Order status updated to {order.get_status_display()}.',
+        'message': f'Order status updated to {order.get_status_display()}.{refund_msg}',
         'new_status': new_status,
         'new_status_display': order.get_status_display(),
     })
@@ -1450,6 +1460,7 @@ def admin_approve_return(request, order_id):
 
     # Wallet refund for prepaid orders
     refund_amount = order.refund_amount()
+    print(f"RETURN REFUND: order={order.order_id}, method={order.payment_method}, total={order.total}, refund={refund_amount}")
     if refund_amount > 0:
         wallet, _ = _Wallet.objects.get_or_create(user=order.user)
         wallet.credit(

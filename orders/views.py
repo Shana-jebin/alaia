@@ -186,12 +186,13 @@ def apply_coupon(request):
 
 
 # ── PLACE ORDER (COD / WALLET) ────────────────────────────────────
-
 @login_required
 @transaction.atomic
 def place_order(request):
     if request.method != 'POST':
         return redirect('orders:checkout')
+
+    from decimal import Decimal
 
     cart  = get_object_or_404(Cart, user=request.user)
     items = cart.items.select_related(
@@ -220,10 +221,12 @@ def place_order(request):
         messages.error(request, "No valid items to order.")
         return redirect('orders:cart')
 
+    # ── CALCULATE TOTAL ──
     subtotal = sum(
-    (Decimal(str(item.variant.final_price)) * item.quantity for item in valid_items),
-    Decimal("0.00")
-)
+        (Decimal(str(item.variant.final_price)) * item.quantity for item in valid_items),
+        Decimal("0.00")
+    )
+
     shipping = Decimal('0') if subtotal >= Decimal('2999') else Decimal('99')
     discount = Decimal('0')
     coupon   = None
@@ -233,9 +236,13 @@ def place_order(request):
         coupon, disc_float, err = _validate_coupon_for_user(coupon_code, request.user, subtotal)
         if coupon:
             discount = Decimal(str(disc_float))
-        # silently ignore invalid coupon at this stage (was validated on apply)
 
     total = subtotal + shipping - discount
+
+    # ── COD LIMIT CHECK  ──
+    if payment_method == "cod" and total > 2500:
+        messages.error(request, "Cash on Delivery is only available for orders up to ₹2500.")
+        return redirect('orders:checkout')
 
     # ── wallet payment ──
     if payment_method == 'wallet':
@@ -264,10 +271,15 @@ def place_order(request):
         payment_status='paid' if payment_method in ('wallet',) else 'pending',
     )
 
-    # ── create order items & deduct stock ──
+    # ── create order items ──
     for item in valid_items:
         v   = item.variant
         img = v.images.first()
+
+        if img and img.image:
+            image_url = img.image.url
+        else:
+            image_url = ''
         OrderItem.objects.create(
             order=order,
             variant=v,
@@ -275,14 +287,14 @@ def place_order(request):
             brand_name=v.product.brand.name,
             color=v.color,
             size=v.size,
-            image_url=img.image.url if img else '',
+            image_url=image_url,
             quantity=item.quantity,
             unit_price=v.final_price,
         )
         v.stock -= item.quantity
         v.save(update_fields=['stock'])
 
-    # ── deduct wallet balance ──
+    # ── wallet debit ──
     if payment_method == 'wallet':
         wallet = _get_wallet(request.user)
         wallet.debit(
@@ -291,7 +303,7 @@ def place_order(request):
             order=order,
         )
 
-    # ── record coupon usage ──
+    # ── coupon usage ──
     if coupon:
         CouponUsage.objects.create(coupon=coupon, user=request.user, order=order)
         coupon.used_count += 1
@@ -299,12 +311,11 @@ def place_order(request):
 
     cart.items.all().delete()
 
-    # ── Razorpay: redirect to payment page instead of success ──
+    # ── Razorpay ──
     if payment_method == 'online':
         return redirect('orders:razorpay_payment', order_id=order.order_id)
 
     return redirect('orders:order_success', order_id=order.order_id)
-
 
 # ── RAZORPAY ──────────────────────────────────────────────────────
 
@@ -446,11 +457,13 @@ def order_list(request):
 @login_required
 def order_detail(request, order_id):
     order = get_object_or_404(Order, order_id=order_id, user=request.user)
+    for item in order.items.all():
+        item.first_image = item.variant.images.first()
     return render(request, 'orders/order-detail.html', {'order': order})
 
 
-# ── CANCEL ORDER ─────────────────────────────────────────────────
 
+# ── CANCEL ITEM ───────────────────────────────────────────────────
 @login_required
 @require_POST
 @transaction.atomic
@@ -469,16 +482,22 @@ def cancel_order(request, order_id):
         if item.variant:
             item.variant.stock += item.quantity
             item.variant.save(update_fields=['stock'])
-        item.status       = 'cancelled'
-        item.cancel_reason= reason
-        item.cancelled_at = timezone.now()
+        item.status        = 'cancelled'
+        item.cancel_reason = reason
+        item.cancelled_at  = timezone.now()
         item.save()
 
-    order.status = 'cancelled'
-    order.save(update_fields=['status', 'updated_at'])
-
-    # ── Wallet refund for prepaid orders ──
+    # ✅ Calculate refund BEFORE zeroing totals
     refund_amount = order.refund_amount()
+
+    # ✅ Now zero out totals
+    order.status   = 'cancelled'
+    order.subtotal = Decimal('0')
+    order.shipping = Decimal('0')
+    order.total    = Decimal('0')
+    order.save(update_fields=['status', 'subtotal', 'shipping', 'total', 'updated_at'])
+
+    # ✅ Credit wallet after saving
     if refund_amount > 0:
         wallet = _get_wallet(request.user)
         wallet.credit(
@@ -487,15 +506,13 @@ def cancel_order(request, order_id):
             order=order,
         )
         return JsonResponse({
-            'success': True,
-            'message': f'Order cancelled. ₹{refund_amount:.0f} refunded to your wallet.',
-            'refunded': True,
+            'success':       True,
+            'message':       f'Order cancelled. ₹{refund_amount:.0f} refunded to your wallet.',
+            'refunded':      True,
             'refund_amount': refund_amount,
         })
 
     return JsonResponse({'success': True, 'message': 'Order cancelled successfully.', 'refunded': False})
-
-
 # ── CANCEL ITEM ───────────────────────────────────────────────────
 
 @login_required
@@ -518,20 +535,31 @@ def cancel_item(request, order_id, item_id):
         item.variant.stock += item.quantity
         item.variant.save(update_fields=['stock'])
 
-    item.status       = 'cancelled'
-    item.cancel_reason= reason
-    item.cancelled_at = timezone.now()
+    item.status        = 'cancelled'
+    item.cancel_reason = reason
+    item.cancelled_at  = timezone.now()
     item.save()
 
-    # If all items cancelled → cancel the order too
     if not order.items.filter(status='active').exists():
         order.status = 'cancelled'
         order.save(update_fields=['status', 'updated_at'])
 
-    # ── Proportional wallet refund for prepaid orders ──
+    # ✅ Recalculate order totals
+    active_items = order.items.filter(status='active')
+    new_subtotal = sum(i.unit_price * i.quantity for i in active_items)
+    new_discount = order.discount if active_items.exists() else Decimal('0')
+    new_shipping = Decimal('0') if new_subtotal >= Decimal('2999') else Decimal('99')
+    new_total    = new_subtotal + new_shipping - new_discount
+
+    order.subtotal = new_subtotal
+    order.shipping = new_shipping
+    order.total    = new_total
+    order.save(update_fields=['subtotal', 'shipping', 'total', 'updated_at'])
+
+    # ✅ Wallet refund for prepaid orders
     refund_amount = 0
     if order.payment_method in ('online', 'wallet'):
-        refund_amount = float(item.subtotal())
+        refund_amount = float(item.unit_price * item.quantity)
         wallet = _get_wallet(request.user)
         wallet.credit(
             refund_amount,
@@ -540,13 +568,14 @@ def cancel_item(request, order_id, item_id):
         )
 
     return JsonResponse({
-        'success':      True,
-        'message':      'Item cancelled successfully.',
-        'refunded':     refund_amount > 0,
+        'success':       True,
+        'message':       'Item cancelled successfully.',
+        'refunded':      refund_amount > 0,
         'refund_amount': refund_amount,
+        'new_subtotal':  float(new_subtotal),
+        'new_total':     float(new_total),
+        'new_shipping':  float(new_shipping),
     })
-
-
 # ── RETURN ORDER ──────────────────────────────────────────────────
 
 @login_required
@@ -576,7 +605,37 @@ def return_order(request, order_id):
 
     return JsonResponse({'success': True, 'message': 'Return request submitted. We will process it shortly.'})
 
+@login_required
+@require_POST
+@transaction.atomic
+def return_item(request, order_id, item_id):
+    order = get_object_or_404(Order, order_id=order_id, user=request.user)
+    item  = get_object_or_404(OrderItem, id=item_id, order=order)
 
+    if order.status != 'delivered' or item.status != 'active':
+        return JsonResponse({'error': 'This item is not eligible for return.'}, status=400)
+
+    try:
+        data   = json.loads(request.body)
+        reason = data.get('reason', '').strip()
+    except Exception:
+        reason = ''
+
+    if not reason:
+        return JsonResponse({'error': 'Please provide a reason for return.'}, status=400)
+
+    item.status        = 'return_requested'
+    item.return_reason = reason
+    item.save()
+
+    if not order.items.filter(status='active').exists():
+        order.status = 'return_requested'
+        order.save(update_fields=['status', 'updated_at'])
+
+    return JsonResponse({
+        'success': True,
+        'message': 'Return request submitted for this item.'
+    })
 # ── WALLET PAGE ───────────────────────────────────────────────────
 
 @login_required
@@ -657,7 +716,7 @@ def download_invoice(request, order_id):
 
         story.append(Paragraph('Order Items', h2_style))
         rows = [['Product', 'Colour / Size', 'Qty', 'Unit Price', 'Subtotal']]
-        for item in order.items.all():
+        for item in order.items.exclude(status='cancelled'):
             rows.append([
                 item.product_name,
                 f"{item.color.title()} / {item.size}",
@@ -682,12 +741,31 @@ def download_invoice(request, order_id):
         story.append(item_table)
         story.append(Spacer(1, 6*mm))
 
-        total_data = [['', 'Subtotal', f"₹{order.subtotal:,.0f}"]]
+       
+        if order.status == 'cancelled':
+            display_subtotal = 0
+            display_shipping = 0
+            display_total = 0
+        else:
+            display_subtotal = order.subtotal
+            display_shipping = order.shipping
+            display_total = order.total
+
+        total_data = [['', 'Subtotal', f"₹{display_subtotal:,.0f}"]]
+
+       
         if float(order.discount) > 0:
             total_data.append(['', f'Discount ({order.coupon_code})', f"- ₹{order.discount:,.0f}"])
-        total_data.append(['', 'Shipping',
-                           f"₹{order.shipping:,.0f}" if float(order.shipping) > 0 else 'FREE'])
-        total_data.append(['', 'TOTAL', f"₹{order.total:,.0f}"])
+
+       
+        total_data.append([
+            '',
+            'Shipping',
+            f"₹{display_shipping:,.0f}" if float(display_shipping) > 0 else 'FREE'
+        ])
+
+       
+        total_data.append(['', 'TOTAL', f"₹{display_total:,.0f}"])
 
         tot_table = Table(total_data, colWidths=[100*mm, 40*mm, 30*mm])
         tot_table.setStyle(TableStyle([

@@ -113,7 +113,7 @@
                     <td style="font-weight:500">
                         {% if not show_deleted %}
                         <span style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:1px">Starting from</span>
-                        ₹{{ product.min_price|floatformat:0 }}
+                        {% comment %} ₹{{ product.min_price}} {% endcomment %}
                         {% else %}—{% endif %}
                     </td>
                     <td>

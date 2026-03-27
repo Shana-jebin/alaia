@@ -116,14 +116,13 @@ class Order(models.Model):
 
     def refund_amount(self):
         """
-        Amount to refund to wallet.
-        For COD orders: no refund (customer never paid online).
-        For online/wallet orders: refund the total paid.
+        Correct refund calculation.
+        Uses original values (before cancellation).
         """
         if self.payment_method == 'cod':
             return 0
-        return float(self.total)
 
+        return float(self.subtotal + self.shipping - self.discount)
 
 class OrderItem(models.Model):
     ITEM_STATUS_CHOICES = [
@@ -178,11 +177,17 @@ class Wallet(models.Model):
     def credit(self, amount, description='', order=None):
         """Add money to wallet and record the transaction."""
         from decimal import Decimal
+        from django.db import transaction
         amount = Decimal(str(amount))
         if amount <= 0:
             raise ValueError("Credit amount must be positive.")
-        self.balance += amount
-        self.save(update_fields=['balance', 'updated_at'])
+
+        with transaction.atomic():
+            wallet = Wallet.objects.select_for_update().get(pk=self.pk)
+            wallet.balance += amount
+            wallet.save(update_fields=['balance', 'updated_at'])
+            self.balance = wallet.balance
+
         WalletTransaction.objects.create(
             wallet=self,
             transaction_type='credit',
@@ -194,13 +199,19 @@ class Wallet(models.Model):
     def debit(self, amount, description='', order=None):
         """Deduct money from wallet and record the transaction."""
         from decimal import Decimal
+        from django.db import transaction
         amount = Decimal(str(amount))
         if amount <= 0:
             raise ValueError("Debit amount must be positive.")
-        if self.balance < amount:
-            raise ValueError("Insufficient wallet balance.")
-        self.balance -= amount
-        self.save(update_fields=['balance', 'updated_at'])
+
+        with transaction.atomic():
+            wallet = Wallet.objects.select_for_update().get(pk=self.pk)
+            if wallet.balance < amount:
+                raise ValueError("Insufficient wallet balance.")
+            wallet.balance -= amount
+            wallet.save(update_fields=['balance', 'updated_at'])
+            self.balance = wallet.balance
+
         WalletTransaction.objects.create(
             wallet=self,
             transaction_type='debit',
@@ -208,7 +219,6 @@ class Wallet(models.Model):
             description=description,
             order=order,
         )
-
 
 class WalletTransaction(models.Model):
     TRANSACTION_TYPES = [

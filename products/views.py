@@ -329,23 +329,24 @@ def product_detail(request, slug):
 
 def variant_data(request, variant_id):
     variant = get_object_or_404(
-    ProductVariant.objects.select_related('product'),
-    id=variant_id,
-    is_deleted=False,
-    product__is_active=True,
-    product__is_deleted=False,
-)
-    images  = [
-        {'url': img.image.url}
-        for img in variant.images.all()
-    ]
+        ProductVariant.objects.select_related('product'),
+        id=variant_id,
+        is_deleted=False,
+        product__is_active=True,
+        product__is_deleted=False,
+    )
+    images = [{'url': img.image.url} for img in variant.images.all()]
+
+    final = variant.final_price
+    has_discount = final < float(variant.price)
+
     return JsonResponse({
-        'id':          variant.id,
-        'price':       str(variant.price),
-        'sales_price': str(variant.final_price),   
+        'id':           variant.id,
+        'price':        str(variant.price),
+        'sales_price':  str(final) if has_discount else None,  # ✅ None if no discount
         'discount_pct': variant.discount_percentage,
-        'stock':       variant.stock,
-        'images':      images,
+        'stock':        variant.stock,
+        'images':       images,
     })
 
 

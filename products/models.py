@@ -14,7 +14,7 @@ class Category(models.Model):
     is_active        = models.BooleanField(default=True)
     is_deleted       = models.BooleanField(default=False)
     created_at       = models.DateTimeField(auto_now_add=True)
-    offer_percentage = models.PositiveIntegerField(default=0)
+    offer_percentage = models.PositiveIntegerField(default=True,null=True)
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -342,8 +342,7 @@ class CartItem(models.Model):
     price_at_added = models.DecimalField(max_digits=10, decimal_places=2)
 
     def subtotal(self):
-        return self.price_at_added * self.quantity
-
+        return self.variant.final_price * self.quantity
     def __str__(self):
         return f"{self.variant} x {self.quantity}"
 

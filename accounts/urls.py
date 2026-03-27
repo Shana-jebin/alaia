@@ -15,6 +15,7 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('referral/', views.referral_page, name='referral_page'),
 
+
     
 
 

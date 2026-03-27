@@ -22,7 +22,8 @@ urlpatterns = [
     path('my-orders/<str:order_id>/',       views.order_detail,          name='order_detail'),
     path('cancel/<str:order_id>/',          views.cancel_order,          name='cancel_order'),
     path('cancel/<str:order_id>/item/<int:item_id>/', views.cancel_item, name='cancel_item'),
-    path('return/<str:order_id>/',          views.return_order,          name='return_order'),
+    path('return/<str:order_id>/',                                        views.return_order,  name='return_order'),
+    path('return/<str:order_id>/item/<int:item_id>/',                     views.return_item,   name='return_item'),
     path('invoice/<str:order_id>/',         views.download_invoice,      name='download_invoice'),
 
     # ── Wallet ────────────────────────────────────────────────────

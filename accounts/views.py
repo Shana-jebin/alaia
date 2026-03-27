@@ -289,7 +289,6 @@ def forgot_password(request):
     return render(request, 'accounts/forgot-password.html')
 
 
-# ── FORGOT OTP ────────────────────────────────────────────────────
 
 @never_cache
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)

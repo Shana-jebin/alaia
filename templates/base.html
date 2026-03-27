@@ -373,7 +373,14 @@
               </svg>
             </div>
 
-            <div class="cart-badge">1</div>
+           
+<div class="cart-badge" id="cartBadge">
+  {% if request.user.is_authenticated %}
+    {% with count=request.user.cart.items.count %}
+      {{ count }}
+    {% endwith %}
+  {% endif %}
+</div>
           </a>
         {% else %}
           <a href="{% url 'accounts:login' %}" class="nav-menu-link">Login</a>
@@ -422,34 +429,61 @@
         <div class="footer-copyright">© 2025 ALAIA. All Rights Reserved.</div>
       </div>
     </footer>
-    {% block extra_js %}
-      <script>
-        document.addEventListener('DOMContentLoaded', function () {
-          const accountIcon = document.querySelector('.account-icon')
-          const menu = document.getElementById('accountMenu')
-        
-          if (accountIcon && menu) {
-            accountIcon.addEventListener('click', function () {
-              if (menu.style.display === 'flex') {
-                menu.style.display = 'none'
-              } else {
-                menu.style.display = 'flex'
-              }
-            })
+   {% block extra_js %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const accountIcon = document.querySelector('.account-icon')
+      const menu = document.getElementById('accountMenu')
+    
+      if (accountIcon && menu) {
+        accountIcon.addEventListener('click', function () {
+          if (menu.style.display === 'flex') {
+            menu.style.display = 'none'
+          } else {
+            menu.style.display = 'flex'
           }
         })
+      }
+    })
 
-        function showToast(message){
-  const toast = document.getElementById("toast-message");
-  toast.innerText = message;
-  toast.style.display = "block";
+    function showToast(message) {
+      const toast = document.getElementById("toast-message");
+      toast.innerText = message;
+      toast.style.display = "block";
+      setTimeout(() => {
+        toast.style.display = "none";
+      }, 3000);
+    }
 
-  setTimeout(()=>{
-    toast.style.display = "none";
-  },3000);
-}
-      </script>
-    {% endblock %}
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        document.cookie.split(';').forEach(function (cookie) {
+          let c = cookie.trim();
+          if (c.startsWith(name + '=')) {
+            cookieValue = decodeURIComponent(c.substring(name.length + 1));
+          }
+        });
+      }
+      return cookieValue;
+    }
+
+    const CSRF_TOKEN = getCookie('csrftoken');
+
+    async function apiFetch(url, data) {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': CSRF_TOKEN,
+        },
+        body: JSON.stringify(data),
+      });
+      return response.json();
+    }
+
+  </script>
+{% endblock %}
     <div id="toast-message" style="
 position:fixed;
 bottom:20px;
