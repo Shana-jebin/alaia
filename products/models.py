@@ -14,7 +14,7 @@ class Category(models.Model):
     is_active        = models.BooleanField(default=True)
     is_deleted       = models.BooleanField(default=False)
     created_at       = models.DateTimeField(auto_now_add=True)
-    offer_percentage = models.PositiveIntegerField(default=True,null=True)
+    offer_percentage = models.PositiveIntegerField(default=0, null=True, blank=True)
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -245,24 +245,17 @@ class ProductVariant(models.Model):
 
     @property
     def final_price(self):
-        """
-        Returns the best (lowest) price after applying:
-        1. Variant sales_price
-        2. Product-level offer (ProductOffer)
-        3. Category-level offer (Category.offer_percentage)
-        The largest discount wins.
-        """
         base_price = float(self.price)
+        prices = []
 
         # --- variant sales price ---
-        prices = []
         if self.sales_price:
             prices.append(float(self.sales_price))
 
         # --- product offer ---
         try:
             offer = self.product.offer
-            if offer.is_currently_active and offer.discount_percentage > 0:
+            if offer.is_currently_active and (offer.discount_percentage or 0) > 0:
                 product_offer_price = base_price * (1 - offer.discount_percentage / 100)
                 prices.append(product_offer_price)
         except ProductOffer.DoesNotExist:
@@ -270,13 +263,15 @@ class ProductVariant(models.Model):
 
         # --- category offer ---
         category = self.product.category
-        if (category and category.is_active
-                and not category.is_deleted
-                and category.offer_percentage > 0):
+        if (
+            category
+            and category.is_active
+            and not category.is_deleted
+            and (category.offer_percentage or 0) > 0   # ✅ FIX HERE
+        ):
             cat_offer_price = base_price * (1 - category.offer_percentage / 100)
             prices.append(cat_offer_price)
 
-        # Best deal = minimum price; fallback to base
         return round(min(prices) if prices else base_price, 2)
 
     @property

@@ -32,19 +32,42 @@
   <!-- Add Money -->
   <div class="wl-add-wrap">
     <div class="wl-add-title">Add Money to Wallet</div>
+
     <div class="wl-quick-amounts">
-      <button class="wl-quick-btn" onclick="setAmount(100, this)">₹100</button>
-      <button class="wl-quick-btn" onclick="setAmount(500, this)">₹500</button>
-      <button class="wl-quick-btn" onclick="setAmount(1000, this)">₹1000</button>
-      <button class="wl-quick-btn" onclick="setAmount(2000, this)">₹2000</button>
+      <button type="button" class="wl-quick-btn" onclick="setAmount(100, this)">₹100</button>
+      <button type="button" class="wl-quick-btn" onclick="setAmount(500, this)">₹500</button>
+      <button type="button" class="wl-quick-btn" onclick="setAmount(1000, this)">₹1000</button>
+      <button type="button" class="wl-quick-btn" onclick="setAmount(2000, this)">₹2000</button>
     </div>
-    <div class="wl-add-row">
-      <input type="number" id="addMoneyInput" class="wl-add-input"
-             placeholder="Enter amount" min="1" max="10000">
-      <button class="wl-add-btn" onclick="addMoney()">Add Money</button>
-    </div>
-    <div id="addMoneyMsg" class="wl-add-msg"></div>
+
+    <form method="POST" action="{% url 'orders:wallet_razorpay_order' %}" onsubmit="return validateAmount()">
+      {% csrf_token %}
+      <div class="wl-add-row">
+        <input
+          type="number"
+          id="addMoneyInput"
+          name="amount"
+          class="wl-add-input"
+          placeholder="Enter amount"
+          min="1"
+          max="10000"
+        >
+        <button type="submit" class="wl-add-btn">Add Money</button>
+      </div>
+      <div id="addMoneyMsg" class="wl-add-msg"></div>
+    </form>
   </div>
+
+  <!-- Django messages (success/error from redirect) -->
+  {% if messages %}
+  <div class="wl-messages">
+    {% for message in messages %}
+    <div class="wl-add-msg {% if message.tags == 'success' %}success{% else %}error{% endif %}">
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
 
   <!-- Transactions -->
   <div class="wl-section-title">Transaction History</div>
@@ -93,39 +116,23 @@ function setAmount(val, btn) {
   btn.classList.add('active');
 }
 
-function addMoney() {
+function validateAmount() {
   const amount = parseFloat(document.getElementById('addMoneyInput').value);
   const msg    = document.getElementById('addMoneyMsg');
 
   if (!amount || amount < 1) {
-    msg.textContent = 'Please enter a valid amount.';
+    msg.textContent = 'Please enter a valid amount (minimum ₹1).';
     msg.className   = 'wl-add-msg error';
-    return;
+    return false;
   }
 
-  fetch("{% url 'orders:wallet_add_money' %}", {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken':  '{{ csrf_token }}',
-    },
-    body: JSON.stringify({ amount }),
-  })
-  .then(r => r.json())
-  .then(d => {
-    if (d.success) {
-      msg.textContent = d.message;
-      msg.className   = 'wl-add-msg success';
-      document.querySelector('.wl-balance-amount').textContent =
-        '₹' + Math.floor(parseFloat(d.new_balance));
-      document.getElementById('addMoneyInput').value = '';
-      document.querySelectorAll('.wl-quick-btn').forEach(b => b.classList.remove('active'));
-      setTimeout(() => location.reload(), 1200);
-    } else {
-      msg.textContent = d.error;
-      msg.className   = 'wl-add-msg error';
-    }
-  });
+  if (amount > 10000) {
+    msg.textContent = 'Maximum amount is ₹10,000.';
+    msg.className   = 'wl-add-msg error';
+    return false;
+  }
+
+  return true;
 }
 </script>
 {% endblock %}

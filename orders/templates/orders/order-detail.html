@@ -230,6 +230,7 @@
 {% endblock %}
 
 {% block extra_js %}
+{{ block.super }}
 <script>
 const CSRF = () => document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
 let pendingItemId = null;

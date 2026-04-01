@@ -32,16 +32,14 @@ User = get_user_model()
 
 def is_admin(user):
     return user.is_authenticated and user.is_staff
-
 @never_cache
 @csrf_protect
 def admin_login(request):
 
-    if request.user.is_authenticated:
-        if request.user.is_staff:
-            return redirect('admin_dashboard')
-        return redirect('home')
+    if request.user.is_authenticated and request.user.is_staff:
+        return redirect('admin_dashboard')
 
+   
     if request.method == "POST":
         username = request.POST.get('username', '').strip()
         password = request.POST.get('password', '').strip()

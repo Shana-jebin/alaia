@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Add Money — ALAIA{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --dark: #2a2520;
+    --gold: #c9a96e;
+    --muted: #888;
+    --bg: #fdfcfa;
+  }
+
+  body { background: var(--bg); }
+
+  .pay-wrap {
+    max-width: 480px;
+    margin: 60px auto;
+    padding: 0 20px;
+    font-family: 'Montserrat', sans-serif;
+  }
+
+  .pay-card {
+    background: #fff;
+    border: 1px solid #ede8e0;
+    border-radius: 12px;
+    padding: 40px;
+    text-align: center;
+    box-shadow: 0 4px 24px rgba(0,0,0,.06);
+  }
+
+  .pay-logo {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: 4px;
+    color: var(--dark);
+    margin-bottom: 8px;
+  }
+
+  .pay-sub {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 28px;
+  }
+
+  .pay-tag {
+    display: inline-block;
+    background: #f0faf4;
+    color: #27ae60;
+    border: 1px solid #b7e4c7;
+    border-radius: 20px;
+    font-size: 11px;
+    padding: 4px 14px;
+    margin-bottom: 16px;
+  }
+
+  .pay-amount {
+    font-size: 38px;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 6px;
+  }
+
+  .pay-note {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 32px;
+  }
+
+  .pay-btn {
+    width: 100%;
+    padding: 16px;
+    background: var(--dark);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background .2s;
+  }
+
+  .pay-btn:hover { background: #3d3530; }
+  .pay-btn:disabled { background: #aaa; cursor: not-allowed; }
+
+  .pay-secure {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 16px;
+  }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="pay-wrap">
+  <div class="pay-card">
+    <div class="pay-logo">ALAIA</div>
+    <div class="pay-sub">Wallet Top-up</div>
+
+    <div class="pay-tag">Adding to your wallet</div>
+    <div class="pay-amount">₹{{ amount|floatformat:0 }}</div>
+    <div class="pay-note">This amount will be credited instantly after payment</div>
+
+    <button class="pay-btn" id="payBtn" onclick="startPayment()">
+      Pay ₹{{ amount|floatformat:0 }}
+    </button>
+
+    <div class="pay-secure">
+      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+        <rect x="3" y="11" width="18" height="11" rx="2"/>
+        <path d="M7 11V7a5 5 0 0110 0v4"/>
+      </svg>
+      256-bit SSL encrypted · Powered by Razorpay
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+function startPayment() {
+  const btn = document.getElementById('payBtn');
+  btn.disabled    = true;
+  btn.textContent = 'Redirecting to payment…';
+
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = 'https://api.razorpay.com/v1/checkout/embedded';
+
+  const fields = {
+    key_id:          '{{ RAZORPAY_KEY_ID }}',
+    order_id:        '{{ razorpay_order_id }}',
+    name:            'ALAIA',
+    description:     'Wallet Top-up',
+    amount:          '{{ amount_paise }}',
+    currency:        'INR',
+    prefill_name:    '{{ user.get_full_name|escapejs }}',
+    prefill_email:   '{{ user.email|escapejs }}',
+    callback_url:    '{{ callback_url }}',  
+    cancel_url:      '{{ callback_url }}',  
+  };
+
+  for (const [key, val] of Object.entries(fields)) {
+    const input   = document.createElement('input');
+    input.type    = 'hidden';
+    input.name    = key;
+    input.value   = val;
+    form.appendChild(input);
+  }
+
+  document.body.appendChild(form);
+  form.submit();
+}
+</script>
+{% endblock %}

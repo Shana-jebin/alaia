@@ -305,6 +305,7 @@
 {% endblock %}
 
 {% block extra_js %}
+{{ block.super }}
 <script>
 // ── Constants ──────────────────────────────────────────────────
 const CSRF         = () => document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';

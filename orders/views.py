@@ -1,6 +1,5 @@
 import json
 from decimal import Decimal
-
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -33,10 +32,7 @@ def _wishlist(user):
 
 
 def _validate_coupon_for_user(code, user, subtotal):
-    """
-    Returns (coupon, discount_amount, error_string).
-    error_string is '' on success.
-    """
+   
     now = timezone.now()
     try:
         coupon = Coupon.objects.get(
@@ -82,7 +78,109 @@ def wallet_add_money(request):
         'message': f'₹{amount:.0f} added to your wallet.',
         'new_balance': str(wallet.balance),
     })
-# ── CHECKOUT ─────────────────────────────────────────────────────
+
+@login_required
+def wallet_razorpay_order(request):
+   
+    if request.method == 'POST':
+        try:
+            amount = Decimal(str(request.POST.get('amount', 0)))
+        except Exception:
+            messages.error(request, 'Invalid amount.')
+            return redirect('orders:wallet')
+
+        if amount < Decimal('1') or amount > Decimal('10000'):
+            messages.error(request, 'Amount must be between ₹1 and ₹10,000.')
+            return redirect('orders:wallet')
+
+        try:
+            import razorpay
+            client = razorpay.Client(
+                auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
+            )
+            rz_order = client.order.create({
+    'amount': int(amount * 100),
+    'currency': 'INR',
+    'receipt': f"wallet_{request.user.id}",
+    'payment_capture': 1,
+    'notes': {
+        'user_id': str(request.user.id)
+    }
+})
+        except Exception as e:
+            messages.error(request, f'Payment gateway error: {e}')
+            return redirect('orders:wallet')
+
+        
+        callback_url = request.build_absolute_uri('/orders/wallet/pay/callback/')
+        return render(request, 'orders/wallet_payment.html', {
+            'amount':            amount,
+            'amount_paise':      int(amount * 100),
+            'razorpay_order_id': rz_order['id'],
+            'RAZORPAY_KEY_ID':   settings.RAZORPAY_KEY_ID,
+            'user':              request.user,
+            'callback_url':      callback_url,
+        })
+    return redirect('orders:wallet')
+
+
+@csrf_exempt
+@require_POST
+def wallet_razorpay_callback(request):
+    
+    razorpay_payment_id = request.POST.get('razorpay_payment_id', '')
+    razorpay_order_id   = request.POST.get('razorpay_order_id', '')
+    razorpay_signature  = request.POST.get('razorpay_signature', '')
+    
+
+  
+    if request.POST.get('error[code]') or not razorpay_payment_id:
+        messages.error(request, 'Wallet top-up payment failed. Please try again.')
+        return redirect('orders:wallet')
+
+    try:
+        import razorpay
+        client = razorpay.Client(
+            auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
+        )
+        client.utility.verify_payment_signature({
+            'razorpay_order_id':   razorpay_order_id,
+            'razorpay_payment_id': razorpay_payment_id,
+            'razorpay_signature':  razorpay_signature,
+        })
+    except Exception:
+        messages.error(request, 'Payment verification failed. Contact support.')
+        return redirect('orders:wallet')
+
+
+    client = razorpay.Client(
+        auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
+    )
+
+    payment = client.payment.fetch(razorpay_payment_id)
+
+    notes = payment.get("notes") or {}
+
+    if isinstance(notes, list):
+        notes = {}
+    user_id = notes.get("user_id")
+
+    if not user_id:
+        return HttpResponse("Invalid payment data", status=400)
+
+    from django.contrib.auth.models import User
+
+    user = User.objects.get(id=user_id)
+
+    amount = Decimal(payment.get("amount", 0)) / 100
+
+    wallet = _get_wallet(user)
+    wallet.credit(
+        amount,
+        description=f"Wallet top-up via Razorpay ({razorpay_payment_id})",
+    )
+    messages.success(request, f'₹{amount:.0f} added to your wallet successfully!')
+    return redirect('orders:wallet')
 
 @login_required
 def checkout(request):
@@ -131,7 +229,7 @@ def checkout(request):
 
     wallet  = _get_wallet(request.user)
 
-    # Available coupons for display (not filtered by user usage here — done on apply)
+   
     now         = timezone.now()
     product_ids = [i.variant.product_id for i in valid_items]
     category_ids= [i.variant.product.category_id for i in valid_items]
@@ -185,7 +283,6 @@ def apply_coupon(request):
     })
 
 
-# ── PLACE ORDER (COD / WALLET) ────────────────────────────────────
 @login_required
 @transaction.atomic
 def place_order(request):
@@ -205,7 +302,6 @@ def place_order(request):
 
     address = get_object_or_404(Address, id=address_id, user=request.user)
 
-    # ── validate items ──
     valid_items = []
     for item in items:
         v = item.variant
@@ -221,7 +317,7 @@ def place_order(request):
         messages.error(request, "No valid items to order.")
         return redirect('orders:cart')
 
-    # ── CALCULATE TOTAL ──
+  
     subtotal = sum(
         (Decimal(str(item.variant.final_price)) * item.quantity for item in valid_items),
         Decimal("0.00")
@@ -231,7 +327,6 @@ def place_order(request):
     discount = Decimal('0')
     coupon   = None
 
-    # ── validate coupon ──
     if coupon_code:
         coupon, disc_float, err = _validate_coupon_for_user(coupon_code, request.user, subtotal)
         if coupon:
@@ -239,19 +334,18 @@ def place_order(request):
 
     total = subtotal + shipping - discount
 
-    # ── COD LIMIT CHECK  ──
+  
     if payment_method == "cod" and total > 2500:
         messages.error(request, "Cash on Delivery is only available for orders up to ₹2500.")
         return redirect('orders:checkout')
 
-    # ── wallet payment ──
+    
     if payment_method == 'wallet':
         wallet = _get_wallet(request.user)
         if wallet.balance < total:
             messages.error(request, f"Insufficient wallet balance. Your balance: ₹{wallet.balance:.0f}")
             return redirect('orders:checkout')
 
-    # ── create order ──
     order = Order.objects.create(
         user=request.user,
         full_name=address.full_name,
@@ -271,13 +365,14 @@ def place_order(request):
         payment_status='paid' if payment_method in ('wallet',) else 'pending',
     )
 
-    # ── create order items ──
+   
     for item in valid_items:
         v   = item.variant
         img = v.images.first()
 
         if img and img.image:
             image_url = img.image.url
+
         else:
             image_url = ''
         OrderItem.objects.create(
@@ -294,7 +389,7 @@ def place_order(request):
         v.stock -= item.quantity
         v.save(update_fields=['stock'])
 
-    # ── wallet debit ──
+    
     if payment_method == 'wallet':
         wallet = _get_wallet(request.user)
         wallet.debit(
@@ -303,7 +398,7 @@ def place_order(request):
             order=order,
         )
 
-    # ── coupon usage ──
+  
     if coupon:
         CouponUsage.objects.create(coupon=coupon, user=request.user, order=order)
         coupon.used_count += 1
@@ -311,13 +406,13 @@ def place_order(request):
 
     cart.items.all().delete()
 
-    # ── Razorpay ──
+  
     if payment_method == 'online':
         return redirect('orders:razorpay_payment', order_id=order.order_id)
 
     return redirect('orders:order_success', order_id=order.order_id)
 
-# ── RAZORPAY ──────────────────────────────────────────────────────
+
 
 @login_required
 def razorpay_payment(request, order_id):
@@ -333,11 +428,14 @@ def razorpay_payment(request, order_id):
             auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
         )
         rz_order = client.order.create({
-            'amount':   int(float(order.total) * 100),  # paise
-            'currency': 'INR',
-            'receipt':  order.order_id,
-            'payment_capture': 1,
-        })
+    'amount': int(float(order.total) * 100),
+    'currency': 'INR',
+    'receipt': order.order_id,
+    'payment_capture': 1,
+    'notes': {
+        'user_id': str(request.user.id)
+    }
+})
         order.razorpay_order_id = rz_order['id']
         order.save(update_fields=['razorpay_order_id'])
     except Exception as e:
@@ -360,7 +458,7 @@ def razorpay_callback(request):
     razorpay_signature  = request.POST.get('razorpay_signature', '')
 
     if request.POST.get('error[code]') or request.POST.get('error[description]'):
-        # Extract order_id from error metadata
+    
         import json as _json
         try:
             metadata = _json.loads(request.POST.get('error[metadata]', '{}'))
@@ -380,7 +478,6 @@ def razorpay_callback(request):
     except Order.DoesNotExist:
         return redirect('orders:order_list')
 
-    # If no payment ID or signature — payment was cancelled/failed
     if not razorpay_payment_id or not razorpay_signature:
         order.payment_status = 'failed'
         order.save(update_fields=['payment_status', 'updated_at'])
@@ -433,7 +530,7 @@ def order_success(request, order_id):
     return render(request, 'orders/order-success.html', {'order': order})
 
 
-# ── ORDER LIST / DETAIL ───────────────────────────────────────────
+
 
 @login_required
 def order_list(request):
@@ -457,13 +554,10 @@ def order_list(request):
 @login_required
 def order_detail(request, order_id):
     order = get_object_or_404(Order, order_id=order_id, user=request.user)
-    for item in order.items.all():
-        item.first_image = item.variant.images.first()
     return render(request, 'orders/order-detail.html', {'order': order})
 
 
 
-# ── CANCEL ITEM ───────────────────────────────────────────────────
 @login_required
 @require_POST
 @transaction.atomic
@@ -487,17 +581,17 @@ def cancel_order(request, order_id):
         item.cancelled_at  = timezone.now()
         item.save()
 
-    # ✅ Calculate refund BEFORE zeroing totals
+   
     refund_amount = order.refund_amount()
 
-    # ✅ Now zero out totals
+   
     order.status   = 'cancelled'
     order.subtotal = Decimal('0')
     order.shipping = Decimal('0')
     order.total    = Decimal('0')
     order.save(update_fields=['status', 'subtotal', 'shipping', 'total', 'updated_at'])
 
-    # ✅ Credit wallet after saving
+   
     if refund_amount > 0:
         wallet = _get_wallet(request.user)
         wallet.credit(
@@ -513,7 +607,7 @@ def cancel_order(request, order_id):
         })
 
     return JsonResponse({'success': True, 'message': 'Order cancelled successfully.', 'refunded': False})
-# ── CANCEL ITEM ───────────────────────────────────────────────────
+
 
 @login_required
 @require_POST
@@ -544,7 +638,6 @@ def cancel_item(request, order_id, item_id):
         order.status = 'cancelled'
         order.save(update_fields=['status', 'updated_at'])
 
-    # ✅ Recalculate order totals
     active_items = order.items.filter(status='active')
     new_subtotal = sum(i.unit_price * i.quantity for i in active_items)
     new_discount = order.discount if active_items.exists() else Decimal('0')
@@ -556,7 +649,6 @@ def cancel_item(request, order_id, item_id):
     order.total    = new_total
     order.save(update_fields=['subtotal', 'shipping', 'total', 'updated_at'])
 
-    # ✅ Wallet refund for prepaid orders
     refund_amount = 0
     if order.payment_method in ('online', 'wallet'):
         refund_amount = float(item.unit_price * item.quantity)
@@ -940,14 +1032,15 @@ def cart_view(request):
 
     total = sum(item.subtotal() for item in items)
     return render(request, "orders/cart.html", {"cart": cart, "items": items, "total": total})
-
-
+@login_required
 def update_cart_quantity(request, item_id, action):
     cart_item = get_object_or_404(CartItem, id=item_id, cart__user=request.user)
-    variant   = cart_item.variant
+    variant = cart_item.variant
 
     if action == "increase":
         if cart_item.quantity + 1 > variant.stock:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'Not enough stock.'})
             messages.error(request, "Not enough stock available.")
         else:
             cart_item.quantity += 1
@@ -960,5 +1053,9 @@ def update_cart_quantity(request, item_id, action):
             cart_item.delete()
     elif action == "remove":
         cart_item.delete()
+
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': True})
 
     return redirect("orders:cart")

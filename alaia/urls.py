@@ -6,6 +6,7 @@ from django.conf.urls.static import static
 from accounts.views import logout_view
 
 
+admin.site.login_url = '/admin-panel/login/'
 
 
 urlpatterns = [

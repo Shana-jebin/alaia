@@ -29,6 +29,8 @@ urlpatterns = [
     # ── Wallet ────────────────────────────────────────────────────
     path('wallet/',                         views.wallet_page,           name='wallet'),
     path('wallet/add-money/', views.wallet_add_money, name='wallet_add_money'),
+    path('wallet/pay/',              views.wallet_razorpay_order,    name='wallet_razorpay_order'),
+    path('wallet/pay/callback/',     views.wallet_razorpay_callback, name='wallet_razorpay_callback'),
 
     # ── Wishlist ──────────────────────────────────────────────────
     path('wishlist/',                                   views.wishlist_page,         name='wishlist'),

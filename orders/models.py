@@ -76,10 +76,11 @@ class Order(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.order_id:
-            oid = generate_order_id()
-            while Order.objects.filter(order_id=oid).exists():
+            for _ in range(10):
                 oid = generate_order_id()
-            self.order_id = oid
+                if not Order.objects.filter(order_id=oid).exists():
+                    self.order_id = oid
+                    break
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -115,14 +116,10 @@ class Order(models.Model):
         return self.payment_method in ('online', 'wallet')
 
     def refund_amount(self):
-        """
-        Correct refund calculation.
-        Uses original values (before cancellation).
-        """
         if self.payment_method == 'cod':
             return 0
-
-        return float(self.subtotal + self.shipping - self.discount)
+       
+        return float(self.total)
 
 class OrderItem(models.Model):
     ITEM_STATUS_CHOICES = [
@@ -182,22 +179,21 @@ class Wallet(models.Model):
         if amount <= 0:
             raise ValueError("Credit amount must be positive.")
 
+        
         with transaction.atomic():
             wallet = Wallet.objects.select_for_update().get(pk=self.pk)
             wallet.balance += amount
             wallet.save(update_fields=['balance', 'updated_at'])
             self.balance = wallet.balance
-
-        WalletTransaction.objects.create(
-            wallet=self,
-            transaction_type='credit',
-            amount=amount,
-            description=description,
-            order=order,
-        )
+            WalletTransaction.objects.create( 
+                wallet=self,
+                transaction_type='credit',
+                amount=amount,
+                description=description,
+                order=order,
+            )
 
     def debit(self, amount, description='', order=None):
-        """Deduct money from wallet and record the transaction."""
         from decimal import Decimal
         from django.db import transaction
         amount = Decimal(str(amount))
@@ -211,15 +207,13 @@ class Wallet(models.Model):
             wallet.balance -= amount
             wallet.save(update_fields=['balance', 'updated_at'])
             self.balance = wallet.balance
-
-        WalletTransaction.objects.create(
-            wallet=self,
-            transaction_type='debit',
-            amount=amount,
-            description=description,
-            order=order,
-        )
-
+            WalletTransaction.objects.create(  
+                wallet=self,
+                transaction_type='debit',
+                amount=amount,
+                description=description,
+                order=order,
+            )
 class WalletTransaction(models.Model):
     TRANSACTION_TYPES = [
         ('credit', 'Credit'),

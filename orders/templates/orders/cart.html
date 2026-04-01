@@ -142,35 +142,47 @@ No image
 
 <div class="cart-toast" id="cartToast"></div>
 {% endblock %}
-
 {% block extra_js %}
+{{ block.super }}
 <script>
-const CSRF = () => document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
-
-function showToast(msg) {
-  const t = document.getElementById('cartToast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2500);
+window.getCSRF = function() {
+  const match = document.cookie.match(/csrftoken=([^;]+)/);
+  return match ? match[1] : '';
 }
 
-function updateQty(itemId, action) {
+window.updateQty = function(itemId, action) {
   fetch(`/orders/cart/update/${itemId}/${action}/`, {
-    method: 'GET',
-    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-  }).then(() => {
-    window.location.reload();
-  }).catch(() => showToast('Error updating quantity'));
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': window.getCSRF(),
+      'X-Requested-With': 'XMLHttpRequest'
+    }
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+    
+      const qtyEl = document.getElementById('qty-' + itemId);
+      if (qtyEl) {
+        const current = parseInt(qtyEl.textContent);
+        if (action === 'increase') qtyEl.textContent = current + 1;
+        else if (action === 'decrease' && current > 1) qtyEl.textContent = current - 1;
+        else if (action === 'decrease' && current <= 1) location.reload(); // item removed
+      }
+    }
+  })
+  .catch(err => console.error(err));
 }
-function removeItem(itemId) {
+
+window.removeItem = function(itemId) {
   const el = document.getElementById('item-' + itemId);
   el.classList.add('removing');
-
   fetch(`/orders/cart/update/${itemId}/remove/`, {
-    method: 'GET',
-  }).then(() => {
-    setTimeout(() => window.location.reload(), 300);
-  });
+    method: 'POST',
+    headers: { 'X-CSRFToken': window.getCSRF() }
+  })
+  .then(res => res.json())
+  .then(data => { if(data.success) setTimeout(() => location.reload(), 300); });
 }
 </script>
 {% endblock %}
