@@ -955,13 +955,15 @@ def admin_order_status(request, order_id):
 
     refund_msg = ''
     if new_status == 'returned' and order.status == 'return_requested':
-        refund_amount = order.refund_amount()
+        refund_amount = order.total   
+
         for item in order.items.filter(status='return_requested'):
             if item.variant:
                 item.variant.stock += item.quantity
                 item.variant.save(update_fields=['stock'])
             item.status = 'returned'
             item.save()
+
         if refund_amount > 0:
             wallet, _ = Wallet.objects.get_or_create(user=order.user)
             wallet.credit(

@@ -2,10 +2,9 @@ from django.db import models
 from django.utils.text import slugify
 from django.utils import timezone
 from django.core.exceptions import ValidationError
-
 from django.conf import settings
 
-# ── CATEGORY ─────────────────────────────────────────────────────
+
 
 class Category(models.Model):
     name             = models.CharField(max_length=100, unique=True)
@@ -25,7 +24,7 @@ class Category(models.Model):
         return self.name
 
 
-# ── BRAND ─────────────────────────────────────────────────────────
+
 
 class Brand(models.Model):
     name      = models.CharField(max_length=100, unique=True)
@@ -88,7 +87,7 @@ class Product(models.Model):
     deleted_at  = models.DateTimeField(blank=True, null=True)
     created_at  = models.DateTimeField(auto_now_add=True)
 
-    # default manager hides deleted; use all_objects to see everything
+    
     objects     = ProductManager()
     all_objects = models.Manager()
 
@@ -153,11 +152,8 @@ class Product(models.Model):
 # ── PRODUCT OFFER ─────────────────────────────────────────────────
 
 class ProductOffer(models.Model):
-    """
-    Product-level percentage offer.
-    When both a product offer and a category offer exist,
-    the LARGEST discount wins (handled in ProductVariant.final_price).
-    """
+   
+
     product            = models.OneToOneField(
         Product, on_delete=models.CASCADE, related_name='offer'
     )
@@ -342,7 +338,6 @@ class CartItem(models.Model):
         return f"{self.variant} x {self.quantity}"
 
 
-# ── REVIEW ────────────────────────────────────────────────────────
 
 from django.contrib.auth import get_user_model
 User = get_user_model()
