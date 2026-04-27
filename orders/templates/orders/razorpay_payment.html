@@ -194,8 +194,8 @@ function startPayment() {
     prefill_name:    '{{ order.full_name|escapejs }}',
     prefill_email:   '{{ order.user.email|escapejs }}',
     prefill_contact: '9999999999',
-    callback_url: 'http://127.0.0.1:8000/orders/razorpay/callback/',
-    cancel_url:   'http://127.0.0.1:8000/orders/payment-failed/{{ order.order_id }}/',
+    callback_url: 'https://alaiaa.shop/orders/razorpay/callback/'
+    cancel_url: 'https://alaiaa.shop/orders/payment-failed/{{ order.order_id }}/'
   };
 
   for (const [key, val] of Object.entries(fields)) {
