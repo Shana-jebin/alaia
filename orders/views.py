@@ -54,75 +54,63 @@ def _validate_coupon_for_user(code, user, subtotal):
     discount = coupon.compute_discount(subtotal)
     return coupon, discount, ''
 
+# @login_required
+# @require_POST
+# def wallet_add_money(request):
+#     try:
+#         data   = json.loads(request.body)
+#         amount = Decimal(str(data.get('amount', 0)))
+#     except Exception:
+#         return JsonResponse({'error': 'Invalid amount.'}, status=400)
+
+#     if amount < Decimal('1'):
+#         return JsonResponse({'error': 'Minimum amount is ₹1.'}, status=400)
+#     if amount > Decimal('10000'):
+#         return JsonResponse({'error': 'Maximum amount is ₹10,000.'}, status=400)
+
+#     wallet = _get_wallet(request.user)
+#     wallet.credit(
+#         amount,
+#         description=f"Money added to wallet",
+#     )
+#     return JsonResponse({
+#         'success': True,
+#         'message': f'₹{amount:.0f} added to your wallet.',
+#         'new_balance': str(wallet.balance),
+#     })
+
 @login_required
 @require_POST
-def wallet_add_money(request):
+def wallet_razorpay_order(request):
+    from decimal import Decimal
+    import razorpay
+
     try:
-        data   = json.loads(request.body)
-        amount = Decimal(str(data.get('amount', 0)))
-    except Exception:
-        return JsonResponse({'error': 'Invalid amount.'}, status=400)
+        amount = Decimal(str(request.POST.get('amount', 0)))
+    except:
+        return JsonResponse({"error": "Invalid amount"}, status=400)
 
-    if amount < Decimal('1'):
-        return JsonResponse({'error': 'Minimum amount is ₹1.'}, status=400)
-    if amount > Decimal('10000'):
-        return JsonResponse({'error': 'Maximum amount is ₹10,000.'}, status=400)
+    if amount < Decimal('1') or amount > Decimal('10000'):
+        return JsonResponse({"error": "Invalid amount"}, status=400)
 
-    wallet = _get_wallet(request.user)
-    wallet.credit(
-        amount,
-        description=f"Money added to wallet",
+    client = razorpay.Client(
+        auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
     )
-    return JsonResponse({
-        'success': True,
-        'message': f'₹{amount:.0f} added to your wallet.',
-        'new_balance': str(wallet.balance),
+
+    order = client.order.create({
+        "amount": int(amount * 100),
+        "currency": "INR",
+        "payment_capture": 1,
+        "notes": {
+            "user_id": str(request.user.id)
+        }
     })
 
-@login_required
-def wallet_razorpay_order(request):
-   
-    if request.method == 'POST':
-        try:
-            amount = Decimal(str(request.POST.get('amount', 0)))
-        except Exception:
-            messages.error(request, 'Invalid amount.')
-            return redirect('orders:wallet')
-
-        if amount < Decimal('1') or amount > Decimal('10000'):
-            messages.error(request, 'Amount must be between ₹1 and ₹10,000.')
-            return redirect('orders:wallet')
-
-        try:
-            import razorpay
-            client = razorpay.Client(
-                auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
-            )
-            rz_order = client.order.create({
-    'amount': int(amount * 100),
-    'currency': 'INR',
-    'receipt': f"wallet_{request.user.id}",
-    'payment_capture': 1,
-    'notes': {
-        'user_id': str(request.user.id)
-    }
-})
-        except Exception as e:
-            messages.error(request, f'Payment gateway error: {e}')
-            return redirect('orders:wallet')
-
-        
-        callback_url = request.build_absolute_uri('/orders/wallet/pay/callback/')
-        return render(request, 'orders/wallet_payment.html', {
-            'amount':            amount,
-            'amount_paise':      int(amount * 100),
-            'razorpay_order_id': rz_order['id'],
-            'RAZORPAY_KEY_ID':   settings.RAZORPAY_KEY_ID,
-            'user':              request.user,
-            'callback_url':      callback_url,
-        })
-    return redirect('orders:wallet')
-
+    return JsonResponse({
+        "key": settings.RAZORPAY_KEY_ID,
+        "amount": order["amount"],
+        "order_id": order["id"],
+    })
 
 @csrf_exempt
 @require_POST
